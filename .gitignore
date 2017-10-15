@@ -1,0 +1,4 @@
+dist/
+.bash_history
+.cabal/
+.ghc/

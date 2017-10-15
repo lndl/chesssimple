@@ -1,0 +1,3 @@
+:l tests/Chesssimple/Board.hs
+quickCheck prop_queen_movs
+quickCheck prop_all_pieces_inside_board
