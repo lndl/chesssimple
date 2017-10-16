@@ -13,6 +13,6 @@ data Game = Game { player1 :: Player
 newGame :: Player -> Player -> Game
 newGame p1 p2 = Game { player1 = p1
                      , player2 = p2
-                     , board   = newBoard classicLayout
+                     , board   = classicBoard
                      , turn    = 1
                      }
