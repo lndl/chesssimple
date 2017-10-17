@@ -1,29 +1,23 @@
 module Chesssimple.Board (
   Board,
   Position,
-  ColouredPiece(Black,White),
   Piece(Pawn, Tower, Knight, Bishop, Queen, King),
-  classicBoard, freeMovements, allMovements ) where
+  ColouredPiece,
+  classicBoard, freeMovements, allMovements, movePiece ) where
+
+import Chesssimple.Color
 
 import Data.Matrix
 
-type Board  = Matrix Square
-
-type Position = (Int, Int)
-
-data Square = BlankSquare | OccupiedSquare ColouredPiece deriving (Eq)
-
-data ColouredPiece = Black Piece | White Piece deriving (Eq)
-
-data Piece = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq)
+type Board         = Matrix Square
+type Position      = (Int, Int)
+data Square        = BlankSquare | OccupiedSquare ColouredPiece deriving (Eq)
+data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq)
+type ColouredPiece = (Color, Piece)
 
 instance Show Square where
   show BlankSquare         = "."
   show (OccupiedSquare cp) = show cp
-
-instance Show ColouredPiece where
-  show (Black p) = "b" ++ show p
-  show (White p) = "w" ++ show p
 
 instance Show Piece where
   show Pawn   = "P"
@@ -41,22 +35,35 @@ classicBoard = newBoard classicLayout
 
 classicLayout :: Position -> Square
 classicLayout (i, j)
-  | (i == 1) && (j == 1 || j == 8) = OccupiedSquare $ Black Tower
-  | (i == 1) && (j == 2 || j == 7) = OccupiedSquare $ Black Knight
-  | (i == 1) && (j == 3 || j == 6) = OccupiedSquare $ Black Bishop
-  | (i == 1) && (j == 4)           = OccupiedSquare $ Black Queen
-  | (i == 1) && (j == 5)           = OccupiedSquare $ Black King
-  | (i == 2)                       = OccupiedSquare $ Black Pawn
-  | (i == 8) && (j == 1 || j == 8) = OccupiedSquare $ White Tower
-  | (i == 8) && (j == 2 || j == 7) = OccupiedSquare $ White Knight
-  | (i == 8) && (j == 3 || j == 6) = OccupiedSquare $ White Bishop
-  | (i == 8) && (j == 4)           = OccupiedSquare $ White Queen
-  | (i == 8) && (j == 5)           = OccupiedSquare $ White King
-  | (i == 7)                       = OccupiedSquare $ White Pawn
+  | (i == 1) && (j == 1 || j == 8) = OccupiedSquare $ (Black, Tower)
+  | (i == 1) && (j == 2 || j == 7) = OccupiedSquare $ (Black, Knight)
+  | (i == 1) && (j == 3 || j == 6) = OccupiedSquare $ (Black, Bishop)
+  | (i == 1) && (j == 4)           = OccupiedSquare $ (Black, Queen)
+  | (i == 1) && (j == 5)           = OccupiedSquare $ (Black, King)
+  | (i == 2)                       = OccupiedSquare $ (Black, Pawn)
+  | (i == 8) && (j == 1 || j == 8) = OccupiedSquare $ (White, Tower)
+  | (i == 8) && (j == 2 || j == 7) = OccupiedSquare $ (White, Knight)
+  | (i == 8) && (j == 3 || j == 6) = OccupiedSquare $ (White, Bishop)
+  | (i == 8) && (j == 4)           = OccupiedSquare $ (White, Queen)
+  | (i == 8) && (j == 5)           = OccupiedSquare $ (White, King)
+  | (i == 7)                       = OccupiedSquare $ (White, Pawn)
   | otherwise                      = BlankSquare
 
-fischerLayout :: Position -> Square
-fischerLayout (i, j) = BlankSquare -- TODO
+legalGrab :: Board -> Color -> Position -> Bool
+legalGrab board color position = let square = safeGet (fst position) (snd position) board
+                                  in case square of
+                                    Just (OccupiedSquare (grabbedColor, _)) -> grabbedColor == color
+                                    _ -> False
+
+movePiece :: Board -> Color -> Position -> Position -> Maybe Board
+movePiece board color src dst =
+  if legalGrab board color src
+     then let availableMovements = freeMovements board src
+           in if dst `elem` availableMovements
+                 then let srcSquare = board ! src
+                       in Just $ setElem BlankSquare src (setElem srcSquare dst board)
+                 else Nothing
+     else Nothing
 
 freeMovements :: Board -> Position -> [Position]
 freeMovements board position
@@ -83,26 +90,21 @@ isInsideBoard = \(i,j) -> i >= 1 && i <= 8 && j >= 1 && j <= 8
 
 isKnightOccupped :: Board -> Position -> Bool
 isKnightOccupped board position = let colouredPiece = square board position
-                                   in colouredPiece == OccupiedSquare (Black Knight) ||
-                                      colouredPiece == OccupiedSquare (White Knight)
+                                   in colouredPiece == OccupiedSquare (Black, Knight) ||
+                                      colouredPiece == OccupiedSquare (White, Knight)
 
 ---------
 --Private
 ---------
 
 pieceUnboundedMovements :: ColouredPiece -> Position -> [[Position]]
-pieceUnboundedMovements (Black Pawn)   = blackPawnMovements
-pieceUnboundedMovements (White Pawn)   = whitePawnMovements
-pieceUnboundedMovements (Black Tower)  = towerMovements
-pieceUnboundedMovements (White Tower)  = towerMovements
-pieceUnboundedMovements (Black Knight) = knightMovements
-pieceUnboundedMovements (White Knight) = knightMovements
-pieceUnboundedMovements (Black Bishop) = bishopMovements
-pieceUnboundedMovements (White Bishop) = bishopMovements
-pieceUnboundedMovements (Black Queen)  = queenMovements
-pieceUnboundedMovements (White Queen)  = queenMovements
-pieceUnboundedMovements (Black King)   = kingMovements
-pieceUnboundedMovements (White King)   = kingMovements
+pieceUnboundedMovements (Black, Pawn)   = blackPawnMovements
+pieceUnboundedMovements (White, Pawn)   = whitePawnMovements
+pieceUnboundedMovements (_, Tower)  = towerMovements
+pieceUnboundedMovements (_, Knight) = knightMovements
+pieceUnboundedMovements (_, Bishop) = bishopMovements
+pieceUnboundedMovements (_, Queen)  = queenMovements
+pieceUnboundedMovements (_, King)   = kingMovements
 
 -- Specific Piece Movements
 
@@ -115,17 +117,17 @@ whitePawnMovements (i,j) = if i == 7 then [[(i-1, j), (i-2, j)]]
                                      else [[(i-1, j)]]
 
 towerMovements :: Position -> [[Position]]
-towerMovements (i,j) = let up    = [ (x, y) | x <- [i], y <- [j+1..8] ]
-                           down  = [ (x, y) | x <- [i], y <- [j-1..1] ]
-                           left  = [ (x, y) | x <- [i-1..1], y <- [j] ]
-                           right = [ (x, y) | x <- [i+1..8], y <- [j] ]
+towerMovements (i,j) = let up    = [ (x, y) | x <- reverse [1..i-1], y <- [j] ]
+                           down  = [ (x, y) | x <- [i+1..8], y <- [j] ]
+                           left  = [ (x, y) | x <- [i], y <- reverse [1..j-1] ]
+                           right = [ (x, y) | x <- [i], y <- [j+1..8] ]
                         in [ up, down, left, right ]
 
 bishopMovements :: Position -> [[Position]]
-bishopMovements (i,j) = let upperLeft  = [ (x, y) | x <- [i-1..1], y <- [j+1..8] ]
-                            upperRight = [ (x, y) | x <- [i+1..1], y <- [j+1..8] ]
-                            lowerLeft  = [ (x, y) | x <- [i-1..1], y <- [j-1..8] ]
-                            lowerRight = [ (x, y) | x <- [i+1..1], y <- [j-1..8] ]
+bishopMovements (i,j) = let upperLeft  = zip (reverse [1..i-1]) (reverse [1..j-1])
+                            upperRight = zip (reverse [1..i-1]) [j+1..8]
+                            lowerLeft  = zip [i+1..8] (reverse [1..j-1])
+                            lowerRight = zip [i+1..8] [j+1..8]
                          in [ upperLeft, upperRight, lowerLeft, lowerRight]
 
 queenMovements :: Position -> [[Position]]

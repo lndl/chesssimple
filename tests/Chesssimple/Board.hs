@@ -1,23 +1,15 @@
 import Test.QuickCheck
 import Chesssimple.Board
+import Chesssimple.Color
 import qualified Data.Set as Set
-
-instance Arbitrary ColouredPiece where
-  arbitrary = defaultArbitraryForColouredPiece
-
-defaultArbitraryForColouredPiece :: Gen ColouredPiece
-defaultArbitraryForColouredPiece  = do
-  color <- elements [Black, White]
-  piece <- elements [Pawn, Tower, Knight, Bishop, Queen, King]
-  return (color piece)
 
 validChessPosition :: Gen Position
 validChessPosition = elements [(x,y) | x <- [1..8], y <- [1..8]]
 
 prop_queen_movs :: Position -> Bool
 prop_queen_movs xy =
-  (Set.fromList (allMovements (White Queen) xy) == Set.fromList (allMovements (White Bishop) xy ++ allMovements (White Tower) xy)) &&
-  (Set.fromList (allMovements (Black Queen) xy) == Set.fromList (allMovements (Black Bishop) xy ++ allMovements (Black Tower) xy))
+  (Set.fromList (allMovements (White, Queen) xy) == Set.fromList (allMovements (White, Bishop) xy ++ allMovements (White, Tower) xy)) &&
+    (Set.fromList (allMovements (Black, Queen) xy) == Set.fromList (allMovements (Black, Bishop) xy ++ allMovements (Black, Tower) xy))
 
 -- Initial properties from board
 

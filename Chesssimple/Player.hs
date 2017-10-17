@@ -1,7 +1,7 @@
-module Chesssimple.Player ( Player, newPlayer ) where
+module Chesssimple.Player ( Player, new ) where
 
 data Player = Player { name :: String
                      } deriving (Show)
 
-newPlayer :: String -> Player
-newPlayer name = Player { name=name }
+new :: String -> Player
+new name = Player { name=name }
