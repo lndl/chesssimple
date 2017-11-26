@@ -5,48 +5,69 @@ import qualified Chesssimple.Player as Player
 import Chesssimple.Board (Position)
 import Chesssimple.Color
 
-import Data.Char
+import Data.Char (digitToInt)
+import Data.List (intercalate)
+import Data.List.Split (splitOn)
 
 main :: IO ()
-main = do
+main =
   let player1 = Player.new "Lautaro"
       player2 = Player.new "Sabrina"
       game    = Game.new player1 player2
    in do
-     putStrLn "Welcome to Simple Chess Game. Type a move or 'exit'"
+     putStrLn "Welcome to Simple Chess Game"
      performGameTurn game
 
 performGameTurn :: Game.Game -> IO ()
 performGameTurn game
-  | Game.finished game = return ()
-  | otherwise          = do
+  | Game.isFinished game = return ()
+  | otherwise            = do
       putStrLn $ Game.show game
-      putStrLn $ colorTurn game ++ " move? "
-      command <- getLine
-      case command of
-        "exit"    -> return ()
-        "avlMovs" -> checkAvailableMovements game
-        _ -> performMove game command
+      putStrLn $ "It's " ++ colorTurn game ++ " move. Commands are: exit, which, move"
+      userInput <- getLine
+      case parseCommand userInput of
+        ("exit" ,         _) -> return ()
+        ("which",     pos:_) -> do
+          putStrLn $ showAvailableMovements game (parsePosition pos)
+          performGameTurn game
+        ("move" , src:dst:_) -> performMove game (parsePosition src) (parsePosition dst)
+        _ -> do
+          putStrLn $ "Bad command. Try again."
+          performGameTurn game
+
+parseCommand :: String -> (String, [String])
+parseCommand userInput = let command:args = splitOn " " userInput
+                          in (command, args)
 
 parseMove :: String -> Maybe (Position, Position)
-parseMove moveStr = let a:b:c:d:_ = map digitToInt (take 4 moveStr)
-                     in Just ((a,b),(c,d))
+parseMove moveStr = do
+  ab <- parsePosition (take 2 moveStr)
+  cd <- parsePosition (take 2 $ reverse moveStr)
+  return (ab, cd)
 
-performMove :: Game.Game -> String -> IO ()
-performMove game moveStr =
-  case parseMove moveStr of
-    Just move -> case (Game.tryMovement game move) of
-                   Just nextGame -> do
-                     performGameTurn nextGame
-                   Nothing -> do
-                     putStrLn "Illegal movement. Try again."
-                     performGameTurn game
+parsePosition :: String -> Maybe Position
+parsePosition pos = let a:b:_ = map digitToInt (take 2 pos)
+                     in Just (a,b)
+
+performMove :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
+performMove game Nothing dst = do
+  putStrLn $ "Bad source position"
+  performGameTurn game
+performMove game src Nothing = do
+  putStrLn $ "Bad destiny position"
+  performGameTurn game
+performMove game (Just src) (Just dst) =
+  case (Game.tryMovement game src dst) of
+    Just nextGame -> performGameTurn nextGame
     Nothing -> do
-      putStrLn "Parse problem in move. Try again."
+      putStrLn "Illegal movement. Try again."
       performGameTurn game
 
-checkAvailableMovements :: Game.Game -> IO ()
-checkAvailableMovements game = return ()
+showAvailableMovements :: Game.Game -> Maybe Position -> String
+showAvailableMovements game Nothing         = "No movements"
+showAvailableMovements game (Just position) = let movs = Game.availableMovements game position
+                                               in if null movs then "No movements"
+                                                               else intercalate ", " $ map show movs
 
 colorTurn :: Game.Game -> String
 colorTurn game = case Game.turn game of

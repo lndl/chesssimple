@@ -1,5 +1,4 @@
 :l tests/Chesssimple/Board.hs
 quickCheck prop_queen_movs
 quickCheck prop_initial_pieces_movs
-
-
+quickCheck prop_legal_grab
