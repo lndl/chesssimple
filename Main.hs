@@ -39,12 +39,6 @@ parseCommand :: String -> (String, [String])
 parseCommand userInput = let command:args = splitOn " " userInput
                           in (command, args)
 
-parseMove :: String -> Maybe (Position, Position)
-parseMove moveStr = do
-  ab <- parsePosition (take 2 moveStr)
-  cd <- parsePosition (take 2 $ reverse moveStr)
-  return (ab, cd)
-
 parsePosition :: String -> Maybe Position
 parsePosition pos = let a:b:_ = map digitToInt (take 2 pos)
                      in Just (a,b)

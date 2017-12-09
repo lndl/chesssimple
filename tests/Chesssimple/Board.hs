@@ -1,7 +1,9 @@
 import Test.QuickCheck
 import Chesssimple.Board
 import Chesssimple.Color
-import qualified Data.Set as Set
+import qualified Data.Set  as Set
+import qualified Data.List as List
+import Control.Monad
 
 ------------------------------------
 -- Generators (defaults and customs)
@@ -31,10 +33,18 @@ instance Arbitrary Square where
     square <- elements [BlankSquare, OccupiedSquare colouredPiece]
     return square
 
+-- a random board is anyone who any number and types of pieces,
+-- except for Kings: there are always only one black king and only one white king
 randomBoard :: Gen Board
-randomBoard = do
-  randomSquares <- sequence [ arbitrary :: Gen Square | _ <- [1..64]]
-  return (newBoardFromList randomSquares)
+randomBoard =
+  let onlyOneKing   = \color squares -> length (List.elemIndices (OccupiedSquare (CP (color, King))) squares) == 1
+      fullGenCond   = \squares -> (onlyOneKing White squares) && (onlyOneKing Black squares)
+    in do
+      randomSquares <- suchThat (vectorOf 64 (arbitrary :: Gen Square)) fullGenCond
+      return $ newBoardFromList randomSquares
+
+validBoard :: Gen Board
+validBoard = suchThat randomBoard isValid
 
 ------------------------------------
 -- Properties
@@ -60,6 +70,22 @@ checkInitialPiecesMovs (x,y)  -- keep in mind that initial check of chess pieces
   | (x == 7)                  = (length $ freeMovements classicBoard White (x,y)) == 2 -- white pawns only
   | otherwise                 = (length $ freeMovements classicBoard White (x,y)) == 0 -- the rest of the pieces
   where isKnight = elem (x,y) [(1,2),(1,7),(8,2),(8,7)]
+
+
+-- Must be always one king per band
+prop_always_one_king =
+  forAll randomBoard $ \board ->
+    forAll (arbitrary :: Gen Color) $ \color ->
+      (length $ positionsOf board color King) == 1
+
+-- Must be impossible for a king to move to a position threatened by an enemy
+prop_legal_king_movement =
+  forAll validBoard $ \board ->
+    forAll (arbitrary :: Gen Color) $ \color ->
+      let kingPosition = head $ positionsOf board color King
+       in let kingMovements  = Set.fromList (freeMovements board color kingPosition)
+              enemyMovements = Set.fromList (teamMovements board (switch color))
+           in null $ Set.intersection kingMovements enemyMovements
 
 -- Must be impossible to initiate a movement over blank squares or enemy pieces
 prop_legal_grab =

@@ -4,12 +4,13 @@ module Chesssimple.Board (
   Square(BlankSquare,OccupiedSquare),
   Piece(Pawn, Tower, Knight, Bishop, Queen, King),
   ColouredPiece(CP),
-  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, allMovements, movePiece,
-                         square, isSquareFree, isSquareOccupiedByEnemy) where
+  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, teamMovements, allMovements, movePiece,
+                         isValid, piece, square, isSquareFree, isSquareOccupiedByEnemy, positionsOf) where
 
 import Chesssimple.Color
 
 import Data.Matrix
+import qualified Data.List as List(intersect)
 
 type Board         = Matrix Square
 type Position      = (Int, Int)
@@ -82,15 +83,50 @@ movePiece board turn src dst = let availableMovements = freeMovements board turn
                                           in Just $ setElem BlankSquare src (setElem srcSquare dst board)
                                    else Nothing
 
+isCheck :: Board -> Color -> Bool
+isCheck board color = not . null $ positionThreatenedBy board $ head $ positionsOf board color King
+
+isValid :: Board -> Bool
+isValid board = let blackKingPos = head $ positionsOf board Black King
+                    whiteKingPos = head $ positionsOf board White King
+                 in null ((positionThreatenedBy board blackKingPos) ++ (positionThreatenedBy board whiteKingPos))
+
+positionThreatenedBy :: Board -> Position -> [Position]
+positionThreatenedBy board position =
+  case (color $ square board position) of
+    Just pieceColor -> let enemyMovements = teamMovements board (switch pieceColor)
+                           ownMovements = freeMovements board pieceColor position
+                        in List.intersect ownMovements enemyMovements
+    Nothing         -> []
+
+validChessPositions :: [Position]
+validChessPositions = [ (x,y) | x <- [1..8], y <- [1..8] ]
+
+positionsOf :: Board -> Color -> Piece -> [Position]
+positionsOf board color somePiece = let occupedPositions = filter (not.isSquareFree board) validChessPositions
+                                    in let piecePred = \position -> (CP (color, somePiece)) == (piece $ square board position)
+                                        in filter piecePred occupedPositions
+
 freeMovements :: Board -> Color -> Position -> [Position]
 freeMovements board turn position
   | not (legalGrab board turn position) = []
   | isKnightOccupied board position = concatMap (filter (isSquareFree board)) (allMovements colouredPiece position)
   | isPawnOccupied board position   = _pawnFreeMovements board turn position
-  | otherwise                       = concatMap (availabilityPositionFilter board turn) (allMovements colouredPiece position)
+  | otherwise                       = _generalFreeMovements board turn position
   where
     selectedSquare = square board position
     colouredPiece  = piece selectedSquare
+
+_generalFreeMovements :: Board -> Color -> Position -> [Position]
+_generalFreeMovements board turn position = concatMap (availabilityPositionFilter board turn) (allMovements colouredPiece position)
+  where
+    selectedSquare = square board position
+    colouredPiece  = piece selectedSquare
+
+teamMovements :: Board -> Color -> [Position]
+teamMovements board color =
+  let teamPositions = [ position | position <- validChessPositions, isSquareOccupiedBy color $ square board position ]
+   in concatMap (freeMovements board color) teamPositions
 
 availabilityPositionFilter :: Board -> Color -> [Position] -> [Position]
 availabilityPositionFilter board turn positions = let (frees, occupied) = span (isSquareFree board) positions
@@ -113,6 +149,14 @@ square board position = board ! position
 piece :: Square -> ColouredPiece
 piece (OccupiedSquare colorPiece) = colorPiece
 
+color :: Square -> Maybe Color
+color (OccupiedSquare (CP (color, _))) = Just color
+color BlankSquare                      = Nothing
+
+isSquareOccupiedBy :: Color -> Square -> Bool
+isSquareOccupiedBy color BlankSquare = False
+isSquareOccupiedBy color square      = isColor color $ piece square
+
 isSquareOccupiedByEnemy :: Square -> Color -> Bool
 isSquareOccupiedByEnemy (OccupiedSquare (CP (Black, _))) White = True
 isSquareOccupiedByEnemy (OccupiedSquare (CP (White, _))) Black = True
@@ -120,6 +164,9 @@ isSquareOccupiedByEnemy _ _                                    = False
 
 isInsideBoard :: Position -> Bool
 isInsideBoard = \(i,j) -> i >= 1 && i <= 8 && j >= 1 && j <= 8
+
+isKingOccupied :: Board -> Position -> Bool
+isKingOccupied board position = isOccupiedBy Black King board position || isOccupiedBy White King board position
 
 isKnightOccupied :: Board -> Position -> Bool
 isKnightOccupied board position = isOccupiedBy Black Knight board position || isOccupiedBy White Knight board position

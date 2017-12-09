@@ -2,3 +2,5 @@
 quickCheck prop_queen_movs
 quickCheck prop_initial_pieces_movs
 quickCheck prop_legal_grab
+quickCheck prop_always_one_king
+quickCheck prop_legal_king_movement
