@@ -20,10 +20,11 @@ main =
 
 performGameTurn :: Game.Game -> IO ()
 performGameTurn game
-  | Game.isFinished game = return ()
+  | Game.isCheckMate game = do
+      putStrLn $ "Game finished! " ++ colorTurn game ++ " loses!"
   | otherwise            = do
       putStrLn $ Game.show game
-      putStrLn $ "It's " ++ colorTurn game ++ " move. Commands are: exit, which, move"
+      putStrLn $ "It's " ++ colorTurn game ++ " move" ++ showCheckStatus game ++  ". Commands are: exit, which, move"
       userInput <- getLine
       case parseCommand userInput of
         ("exit" ,         _) -> return ()
@@ -67,3 +68,7 @@ colorTurn :: Game.Game -> String
 colorTurn game = case Game.turn game of
                    White -> "White"
                    Black -> "Black"
+
+showCheckStatus :: Game.Game -> String
+showCheckStatus game = if Game.isCheck game then " (and is in CHECK) "
+                                            else ""

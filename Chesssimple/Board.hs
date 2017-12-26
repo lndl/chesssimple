@@ -4,7 +4,7 @@ module Chesssimple.Board (
   Square(BlankSquare,OccupiedSquare),
   Piece(Pawn, Tower, Knight, Bishop, Queen, King),
   ColouredPiece(CP),
-  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, teamMovements, allMovements, movePiece,
+  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, teamMovements, enemyMovements, allMovements, movePiece, isCheck,
                          isValid, piece, square, isSquareFree, isSquareOccupiedByEnemy, positionsOf) where
 
 import Chesssimple.Color
@@ -79,40 +79,49 @@ legalGrab board turn position = let square = safeGet (fst position) (snd positio
 movePiece :: Board -> Color -> Position -> Position -> Maybe Board
 movePiece board turn src dst = let availableMovements = freeMovements board turn src
                                 in if dst `elem` availableMovements
-                                   then let srcSquare = board ! src
-                                          in Just $ setElem BlankSquare src (setElem srcSquare dst board)
+                                   then Just $ placePiece board src dst
                                    else Nothing
 
+placePiece :: Board -> Position -> Position -> Board
+placePiece board positionFrom positionTo =
+  let srcSquare = board ! positionFrom
+   in setElem BlankSquare positionFrom (setElem srcSquare positionTo board)
+
 isCheck :: Board -> Color -> Bool
-isCheck board color = not . null $ positionThreatenedBy board $ head $ positionsOf board color King
+isCheck board color = isPositionThreatened board color $ head $ positionsOf board color King
 
 isValid :: Board -> Bool
 isValid board = let blackKingPos = head $ positionsOf board Black King
                     whiteKingPos = head $ positionsOf board White King
-                 in null ((positionThreatenedBy board blackKingPos) ++ (positionThreatenedBy board whiteKingPos))
+                 in not (isPositionThreatened board White blackKingPos || isPositionThreatened board Black whiteKingPos)
 
-positionThreatenedBy :: Board -> Position -> [Position]
-positionThreatenedBy board position =
-  case (color $ square board position) of
-    Just pieceColor -> let enemyMovements = teamMovements board (switch pieceColor)
-                           ownMovements = freeMovements board pieceColor position
-                        in List.intersect ownMovements enemyMovements
-    Nothing         -> []
+isPositionThreatened :: Board -> Color -> Position -> Bool
+isPositionThreatened board color position = position `elem` enemyMovements board color
 
 validChessPositions :: [Position]
 validChessPositions = [ (x,y) | x <- [1..8], y <- [1..8] ]
 
+-- A Position list of the desired pieces (color & piece type)
 positionsOf :: Board -> Color -> Piece -> [Position]
-positionsOf board color somePiece = let occupedPositions = filter (not.isSquareFree board) validChessPositions
+positionsOf board color somePiece = let occupiedPositions = filter (not.isSquareFree board) validChessPositions
                                     in let piecePred = \position -> (CP (color, somePiece)) == (piece $ square board position)
-                                        in filter piecePred occupedPositions
+                                        in filter piecePred occupiedPositions
 
 freeMovements :: Board -> Color -> Position -> [Position]
-freeMovements board turn position
+freeMovements board turn position =
+  filter (\possibleDst -> not $ isCheck (placePiece board position possibleDst) turn) $ uncheckedFreeMovements board turn position
+
+uncheckedFreeMovements :: Board -> Color -> Position -> [Position]
+uncheckedFreeMovements board turn position
   | not (legalGrab board turn position) = []
-  | isKnightOccupied board position = concatMap (filter (isSquareFree board)) (allMovements colouredPiece position)
-  | isPawnOccupied board position   = _pawnFreeMovements board turn position
-  | otherwise                       = _generalFreeMovements board turn position
+  | isKnightOccupied board position     = _knightFreeMovements  board turn position
+  | isPawnOccupied board position       = _pawnFreeMovements    board turn position
+  | otherwise                           = _generalFreeMovements board turn position
+
+_knightFreeMovements :: Board -> Color -> Position -> [Position]
+_knightFreeMovements board turn position =
+  let isOccupiedByMe = \dstPos -> isSquareOccupiedBy turn $ square board dstPos
+   in concatMap (filter (\dstPos -> not $ isOccupiedByMe dstPos)) (allMovements colouredPiece position)
   where
     selectedSquare = square board position
     colouredPiece  = piece selectedSquare
@@ -123,10 +132,16 @@ _generalFreeMovements board turn position = concatMap (availabilityPositionFilte
     selectedSquare = square board position
     colouredPiece  = piece selectedSquare
 
+teamPositions :: Board -> Color -> [Position]
+teamPositions board color = [ position | position <- validChessPositions, isSquareOccupiedBy color $ square board position ]
+
 teamMovements :: Board -> Color -> [Position]
-teamMovements board color =
-  let teamPositions = [ position | position <- validChessPositions, isSquareOccupiedBy color $ square board position ]
-   in concatMap (freeMovements board color) teamPositions
+teamMovements board color = concatMap (freeMovements board color) (teamPositions board color)
+
+enemyMovements :: Board -> Color -> [Position]
+enemyMovements board color =
+  let enemyColor = switch color
+   in concatMap (uncheckedFreeMovements board enemyColor) (teamPositions board enemyColor)
 
 availabilityPositionFilter :: Board -> Color -> [Position] -> [Position]
 availabilityPositionFilter board turn positions = let (frees, occupied) = span (isSquareFree board) positions

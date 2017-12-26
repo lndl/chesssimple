@@ -83,9 +83,9 @@ prop_legal_king_movement =
   forAll validBoard $ \board ->
     forAll (arbitrary :: Gen Color) $ \color ->
       let kingPosition = head $ positionsOf board color King
-       in let kingMovements  = Set.fromList (freeMovements board color kingPosition)
-              enemyMovements = Set.fromList (teamMovements board (switch color))
-           in null $ Set.intersection kingMovements enemyMovements
+       in let theKingMovements  = Set.fromList (freeMovements  board color kingPosition)
+              theEnemyMovements = Set.fromList (enemyMovements board color)
+           in null $ Set.intersection theKingMovements theEnemyMovements
 
 -- Must be impossible to initiate a movement over blank squares or enemy pieces
 prop_legal_grab =
