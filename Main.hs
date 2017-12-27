@@ -2,6 +2,7 @@ module Main where
 
 import qualified Chesssimple.Game   as Game
 import qualified Chesssimple.Player as Player
+import qualified Chesssimple.Screen as Screen
 import Chesssimple.Board (Position)
 import Chesssimple.Color
 
@@ -15,26 +16,36 @@ main =
       player2 = Player.new "Sabrina"
       game    = Game.new player1 player2
    in do
-     putStrLn "Welcome to Simple Chess Game"
+     Screen.reset
+     Screen.printWithColor "Welcome to Simple Chess Game" "red"
      performGameTurn game
 
 performGameTurn :: Game.Game -> IO ()
 performGameTurn game
   | Game.isCheckMate game = do
-      putStrLn $ "Game finished! " ++ colorTurn game ++ " loses!"
+      Screen.printWithColor ("Game finished! " ++ colorTurn game ++ " loses!") "red"
   | otherwise            = do
-      putStrLn $ Game.show game
-      putStrLn $ "It's " ++ colorTurn game ++ " move" ++ showCheckStatus game ++  ". Commands are: exit, which, move"
+      printGameLayout game
       userInput <- getLine
       case parseCommand userInput of
         ("exit" ,         _) -> return ()
         ("which",     pos:_) -> do
-          putStrLn $ showAvailableMovements game (parsePosition pos)
+          Screen.printWithColor ("Available movements are: " ++ (showAvailableMovements game (parsePosition pos))) "white"
+          Screen.pause
           performGameTurn game
-        ("move" , src:dst:_) -> performMove game (parsePosition src) (parsePosition dst)
+        ("move" , src:dst:_) -> do
+          performMove game (parsePosition src) (parsePosition dst)
         _ -> do
           putStrLn $ "Bad command. Try again."
           performGameTurn game
+
+printGameLayout :: Game.Game -> IO ()
+printGameLayout game = do
+  Screen.setCursor 2 0
+  Screen.clearUntilEnd
+  putStrLn $ Game.show game
+  Screen.printWithColor (colorTurn game ++ " moves." ++ showCheckStatus game) "white"
+  putStrLn "Commands are: exit, which, move"
 
 parseCommand :: String -> (String, [String])
 parseCommand userInput = let command:args = splitOn " " userInput
