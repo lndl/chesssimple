@@ -17,7 +17,7 @@ main =
       game    = Game.new player1 player2
    in do
      Screen.reset
-     Screen.printWithColor "Welcome to Simple Chess Game" "red"
+     Screen.printWithColor "Welcome to Simple Chess Game" "white"
      performGameTurn game
 
 performGameTurn :: Game.Game -> IO ()
@@ -37,7 +37,7 @@ performGameTurn game
           performMoveAction game (parsePosition src) (parsePosition dst)
         ("undo" ,         _) -> performUndoAction game
         _ -> do
-          putStrLn $ "Bad command. Try again."
+          Screen.printError "Bad command. Try again."
           performGameTurn game
 
 printGameLayout :: Game.Game -> IO ()
@@ -52,8 +52,7 @@ performUndoAction :: Game.Game -> IO ()
 performUndoAction game =
   if Game.isInitial game
   then do
-    Screen.printWithColor "Can't undo game!" "red"
-    Screen.pause
+    Screen.printError "Can't undo game!"
     performGameTurn game
   else do
     performGameTurn $ Game.undo game
@@ -68,16 +67,16 @@ parsePosition pos = let a:b:_ = map digitToInt (take 2 pos)
 
 performMoveAction :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
 performMoveAction game Nothing dst = do
-  putStrLn $ "Bad source position"
+  Screen.printError "Bad source position"
   performGameTurn game
 performMoveAction game src Nothing = do
-  putStrLn $ "Bad destiny position"
+  Screen.printError "Bad destiny position"
   performGameTurn game
 performMoveAction game (Just src) (Just dst) =
   case (Game.tryMovement game src dst) of
     Just nextGame -> performGameTurn nextGame
     Nothing -> do
-      putStrLn "Illegal movement. Try again."
+      Screen.printError "Illegal movement. Try again."
       performGameTurn game
 
 showAvailableMovements :: Game.Game -> Maybe Position -> String

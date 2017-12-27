@@ -3,7 +3,8 @@ module Chesssimple.Screen (
   pause,
   clearUntilEnd,
   setCursor,
-  printWithColor
+  printWithColor,
+  printError
 ) where
 
 import Control.Concurrent (threadDelay)
@@ -29,6 +30,15 @@ printWithColor text color = do
   setSGR [SetColor Foreground Vivid (parseColor color)]
   putStrLn text
   setSGR [SetColor Foreground Dull White]
+
+printError :: String -> IO ()
+printError text = do
+  printWithColor text "red"
+  pause
+
+----------------------------
+-- Private
+----------------------------
 
 parseColor :: String -> Color
 parseColor "red"    = Red
