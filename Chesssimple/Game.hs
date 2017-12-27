@@ -1,4 +1,4 @@
-module Chesssimple.Game ( Game, new, isCheck, isCheckMate, tryMovement, turn, show, availableMovements ) where
+module Chesssimple.Game ( Game, new, isInitial, isCheck, isCheckMate, tryMovement, turn, show, availableMovements, undo ) where
 
 import qualified Chesssimple.Player as Player
 import qualified Chesssimple.Board  as Board
@@ -25,8 +25,18 @@ update game newBoard = let p1       = player1 game
                            nextTurn = Color.switch $ turn game
                         in new' p1 p2 newPlays nextTurn
 
+undo :: Game -> Game
+undo game = let p1                 = player1 game
+                p2                 = player2 game
+                (_:previousPlays)  = plays game
+                previousTurn       = Color.switch $ turn game
+             in new' p1 p2 previousPlays previousTurn
+
 currentBoard :: Game -> Board.Board
 currentBoard game = head $ plays game
+
+isInitial :: Game -> Bool
+isInitial game = length (plays game) == 1
 
 isCheckMate :: Game -> Bool
 isCheckMate game = isCheck game && (null $ allTeamAvailableMovements game)

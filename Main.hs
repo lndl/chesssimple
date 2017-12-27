@@ -34,7 +34,8 @@ performGameTurn game
           Screen.pause
           performGameTurn game
         ("move" , src:dst:_) -> do
-          performMove game (parsePosition src) (parsePosition dst)
+          performMoveAction game (parsePosition src) (parsePosition dst)
+        ("undo" ,         _) -> performUndoAction game
         _ -> do
           putStrLn $ "Bad command. Try again."
           performGameTurn game
@@ -45,7 +46,17 @@ printGameLayout game = do
   Screen.clearUntilEnd
   putStrLn $ Game.show game
   Screen.printWithColor (colorTurn game ++ " moves." ++ showCheckStatus game) "white"
-  putStrLn "Commands are: exit, which, move"
+  putStrLn "Commands are: exit, which, move, undo"
+
+performUndoAction :: Game.Game -> IO ()
+performUndoAction game =
+  if Game.isInitial game
+  then do
+    Screen.printWithColor "Can't undo game!" "red"
+    Screen.pause
+    performGameTurn game
+  else do
+    performGameTurn $ Game.undo game
 
 parseCommand :: String -> (String, [String])
 parseCommand userInput = let command:args = splitOn " " userInput
@@ -55,14 +66,14 @@ parsePosition :: String -> Maybe Position
 parsePosition pos = let a:b:_ = map digitToInt (take 2 pos)
                      in Just (a,b)
 
-performMove :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
-performMove game Nothing dst = do
+performMoveAction :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
+performMoveAction game Nothing dst = do
   putStrLn $ "Bad source position"
   performGameTurn game
-performMove game src Nothing = do
+performMoveAction game src Nothing = do
   putStrLn $ "Bad destiny position"
   performGameTurn game
-performMove game (Just src) (Just dst) =
+performMoveAction game (Just src) (Just dst) =
   case (Game.tryMovement game src dst) of
     Just nextGame -> performGameTurn nextGame
     Nothing -> do
