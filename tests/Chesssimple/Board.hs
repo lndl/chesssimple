@@ -82,10 +82,11 @@ prop_always_one_king =
 prop_legal_king_movement =
   forAll validBoard $ \board ->
     forAll (arbitrary :: Gen Color) $ \color ->
-      let kingPosition = head $ positionsOf board color King
-       in let theKingMovements  = Set.fromList (freeMovements  board color kingPosition)
-              theEnemyMovements = Set.fromList (enemyMovements board color)
-           in null $ Set.intersection theKingMovements theEnemyMovements
+      let kingPosition      = head $ positionsOf board color King
+          theKingMovements  = freeMovements board color kingPosition
+          possibleBoards    = map (\possibleDst -> placePiece board kingPosition possibleDst) theKingMovements
+          safeMovement      = \possibleBoard -> not $ isCheck possibleBoard color
+       in all safeMovement possibleBoards
 
 -- Must be impossible to initiate a movement over blank squares or enemy pieces
 prop_legal_grab =
