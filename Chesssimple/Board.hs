@@ -192,7 +192,8 @@ evaluateBoard :: Board -> Color -> Float
 evaluateBoard board color =
   let numberOf      = \color piece -> length $ positionsOf board color piece
       who2Move      = if color == White then 1 else -1
-      materialScore = (9 * fromIntegral (numberOf White Queen  - numberOf Black Queen) +
+      materialScore = (200 * fromIntegral (numberOf White King  - numberOf Black King) +
+                      9 * fromIntegral (numberOf White Queen  - numberOf Black Queen) +
                       5 * fromIntegral (numberOf White Tower  - numberOf Black Tower) +
                       3 * fromIntegral (numberOf White Bishop - numberOf Black Bishop) +
                       2.8 * fromIntegral (numberOf White Knight - numberOf Black Knight) +

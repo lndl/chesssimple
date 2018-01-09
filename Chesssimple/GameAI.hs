@@ -12,14 +12,18 @@ performMovement :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
 performMovement game strength = negamax game strength
 
 negamax :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
-negamax game strength =
-  let candidateMovs      = map (\candidateGame -> (candidateGame, - negamaxScore candidateGame strength)) (availableMovements game)
-      bestMovComparator  = \(_, nma) (_, nmb)  -> compare nma nmb
+negamax game depth =
+  let negamaxScoreFor   = \aGame -> - negamaxScore aGame depth
+      candidateMovs     = map (\candidateGame -> (candidateGame, negamaxScoreFor candidateGame)) (bestNextGames game)
+      bestMovComparator = \(_, nma) (_, nmb)  -> compare nma nmb
    in fst $ maximumBy bestMovComparator candidateMovs
 
 negamaxScore :: (ZeroSumGame zsg) => zsg -> Integer -> Float
 negamaxScore game depth
   | depth == 0 || isGameOver game = evaluateGame game
   | otherwise  = let negamaxDepthEvaluator = \candidateGame -> - negamaxScore candidateGame (depth - 1)
-                     negamaxDepthValues    = map negamaxDepthEvaluator (availableMovements game)
+                     negamaxDepthValues    = map negamaxDepthEvaluator (bestNextGames game)
                   in maximum negamaxDepthValues
+
+bestNextGames :: (ZeroSumGame zsg) => zsg -> [zsg]
+bestNextGames game = availableMovements game
