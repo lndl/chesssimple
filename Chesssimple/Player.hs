@@ -1,7 +1,13 @@
-module Chesssimple.Player ( Player, new ) where
+module Chesssimple.Player ( Player(ComputerPlayer, HumanPlayer), mkHumanPlayer, mkComputerPlayer, name, strength, color ) where
 
-data Player = Player { name :: String
-                     } deriving (Show)
+import Chesssimple.Color
 
-new :: String -> Player
-new name = Player { name=name }
+data Player =
+  HumanPlayer    { name :: String, color :: Color } |
+  ComputerPlayer { strength :: Integer, color :: Color } deriving (Show)
+
+mkHumanPlayer :: String -> Color -> Player
+mkHumanPlayer name color = HumanPlayer { name=name, color=color }
+
+mkComputerPlayer :: Integer -> Color -> Player
+mkComputerPlayer strength color = ComputerPlayer { strength=strength, color=color }

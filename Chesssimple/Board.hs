@@ -4,8 +4,9 @@ module Chesssimple.Board (
   Square(BlankSquare,OccupiedSquare),
   Piece(Pawn, Tower, Knight, Bishop, Queen, King),
   ColouredPiece(CP),
-  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, teamMovements, enemyMovements, allMovements, movePiece, isCheck,
-                         isValid, piece, square, isSquareFree, isSquareOccupiedByEnemy, positionsOf) where
+  newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, possibleMovementsForeachTeamPosition, teamMovements,
+  enemyMovements, allMovements, movePiece, isCheck, evaluateBoard,
+  isValid, piece, square, isSquareFree, isSquareOccupiedByEnemy, positionsOf) where
 
 import Chesssimple.Color
 
@@ -135,6 +136,9 @@ _generalFreeMovements board turn position = concatMap (availabilityPositionFilte
 teamPositions :: Board -> Color -> [Position]
 teamPositions board color = [ position | position <- validChessPositions, isSquareOccupiedBy color $ square board position ]
 
+possibleMovementsForeachTeamPosition :: Board -> Color -> [(Position, [Position])]
+possibleMovementsForeachTeamPosition board color = map (\src -> (src, freeMovements board color src)) (teamPositions board color)
+
 teamMovements :: Board -> Color -> [Position]
 teamMovements board color = concatMap (freeMovements board color) (teamPositions board color)
 
@@ -196,13 +200,25 @@ isOccupiedBy color piece board position = let colouredPiece = square board posit
 isColor :: Color -> ColouredPiece -> Bool
 isColor color (CP (colorPiece, _)) = colorPiece == color
 
+evaluateBoard :: Board -> Color -> Float
+evaluateBoard board color =
+  let numberOf      = \color piece -> length $ positionsOf board color piece
+      who2Move      = if color == White then 1 else -1
+      materialScore = (9 * fromIntegral (numberOf White Queen  - numberOf Black Queen) +
+                      5 * fromIntegral (numberOf White Tower  - numberOf Black Tower) +
+                      3 * fromIntegral (numberOf White Bishop - numberOf Black Bishop) +
+                      2.8 * fromIntegral (numberOf White Knight - numberOf Black Knight) +
+                      1 * fromIntegral (numberOf White Pawn - numberOf Black Pawn) +
+                      0.1 * fromIntegral (length $ teamMovements board color))
+                   in materialScore * who2Move
+
 ---------
 --Private
 ---------
 
 _pawnFreeMovements :: Board -> Color -> Position -> [Position]
 _pawnFreeMovements board turn (x,y) =
-  let unboundedNormalPositions     = concat $ pieceUnboundedMovements pawnPiece (x,y)
+  let unboundedNormalPositions     = filter (\pos -> not $ isPositionOccupiedByEnemy board turn pos) $ concat $ pieceUnboundedMovements pawnPiece (x,y)
       unboundedCapturablePositions =
         pipelineFilter [(isPositionOccupiedByEnemy board turn), isInsideBoard] [(x+forwardDir, y-1), (x+forwardDir, y+1)]
    in unboundedNormalPositions ++ unboundedCapturablePositions

@@ -3,6 +3,7 @@ module Main where
 import qualified Chesssimple.Game   as Game
 import qualified Chesssimple.Player as Player
 import qualified Chesssimple.Screen as Screen
+import qualified Chesssimple.GameAI as GameAI
 import Chesssimple.Board (Position)
 import Chesssimple.Color
 
@@ -12,8 +13,8 @@ import Data.List.Split (splitOn)
 
 main :: IO ()
 main =
-  let player1 = Player.new "Lautaro"
-      player2 = Player.new "Sabrina"
+  let player1 = Player.mkHumanPlayer "Lautaro" White
+      player2 = Player.mkComputerPlayer 2 Black
       game    = Game.new player1 player2
    in do
      Screen.reset
@@ -26,19 +27,7 @@ performGameTurn game
       Screen.printWithColor ("Game finished! " ++ colorTurn game ++ " loses!") "red"
   | otherwise            = do
       printGameLayout game
-      userInput <- getLine
-      case parseCommand userInput of
-        ("exit" ,         _) -> return ()
-        ("which",     pos:_) -> do
-          Screen.printWithColor ("Available movements are: " ++ (showAvailableMovements game (parsePosition pos))) "white"
-          Screen.pause
-          performGameTurn game
-        ("move" , src:dst:_) -> do
-          performMoveAction game (parsePosition src) (parsePosition dst)
-        ("undo" ,         _) -> performUndoAction game
-        _ -> do
-          Screen.printError "Bad command. Try again."
-          performGameTurn game
+      performGamePlay game $ Game.whoPlaysNow game
 
 printGameLayout :: Game.Game -> IO ()
 printGameLayout game = do
@@ -47,6 +36,26 @@ printGameLayout game = do
   putStrLn $ Game.show game
   Screen.printWithColor (colorTurn game ++ " moves." ++ showCheckStatus game) "white"
   putStrLn "Commands are: exit, which, move, undo"
+
+performGamePlay :: Game.Game -> Player.Player -> IO ()
+performGamePlay game (Player.ComputerPlayer strength _) =
+  let updatedGame = GameAI.performMovement game strength
+   in performGameTurn updatedGame
+performGamePlay game (Player.HumanPlayer name _)    = do
+  userInput <- getLine
+  case parseCommand userInput of
+    ("exit" ,         _) -> return ()
+    ("which",     pos:_) -> do
+      Screen.printWithColor ("Available movements are: " ++ (showAvailableMovements game (parsePosition pos))) "white"
+      Screen.pause
+      performGameTurn game
+    ("move" , src:dst:_) -> do
+      performMoveAction game (parsePosition src) (parsePosition dst)
+    ("undo" ,         _) -> performUndoAction game
+    _ -> do
+      Screen.printError "Bad command. Try again."
+      performGameTurn game
+
 
 performUndoAction :: Game.Game -> IO ()
 performUndoAction game =
