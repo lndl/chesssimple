@@ -37,11 +37,10 @@ update game newBoard = let p1       = player1 game
                         in new' p1 p2 newPlays nextTurn
 
 undo :: Game -> Game
-undo game = let p1                 = player1 game
-                p2                 = player2 game
-                (_:previousPlays)  = plays game
-                previousTurn       = Color.switch $ turn game
-             in new' p1 p2 previousPlays previousTurn
+undo game = let p1                   = player1 game
+                p2                   = player2 game
+                (_:_:previousPlays)  = plays game
+             in new' p1 p2 previousPlays (turn game)
 
 currentBoard :: Game -> Board.Board
 currentBoard game = head $ plays game
