@@ -5,7 +5,7 @@ module Chesssimple.Board (
   Piece(Pawn, Tower, Knight, Bishop, Queen, King),
   ColouredPiece(CP),
   newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, possibleMovementsForeachTeamPosition, teamMovements,
-  enemyMovements, allMovements, movePiece, isCheck, evaluateBoard, placePiece,
+  enemyMovements, allMovements, movePiece, isCheck, isCheckMate, placePiece,
   isValid, piece, square, isSquareFree, isSquareOccupiedByEnemy, positionsOf) where
 
 import Chesssimple.Color
@@ -20,7 +20,7 @@ data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq)
 data ColouredPiece = CP (Color, Piece) deriving (Eq)
 
 instance Show Square where
-  show BlankSquare         = "."
+  show BlankSquare         = "…"
   show (OccupiedSquare cp) = show cp
 
 instance Show ColouredPiece where
@@ -90,6 +90,9 @@ placePiece board positionFrom positionTo =
 
 isCheck :: Board -> Color -> Bool
 isCheck board color = isPositionThreatened board color $ head $ positionsOf board color King
+
+isCheckMate :: Board -> Color -> Bool
+isCheckMate board color = isCheck board color && (null $ teamMovements board color)
 
 isValid :: Board -> Bool
 isValid board = let blackKingPos = head $ positionsOf board Black King
@@ -187,19 +190,6 @@ isOccupiedBy color piece board position = let colouredPiece = square board posit
 
 isColor :: Color -> ColouredPiece -> Bool
 isColor color (CP (colorPiece, _)) = colorPiece == color
-
-evaluateBoard :: Board -> Color -> Float
-evaluateBoard board color =
-  let numberOf      = \color piece -> length $ positionsOf board color piece
-      who2Move      = if color == White then 1 else -1
-      materialScore = (200 * fromIntegral (numberOf White King  - numberOf Black King) +
-                      9 * fromIntegral (numberOf White Queen  - numberOf Black Queen) +
-                      5 * fromIntegral (numberOf White Tower  - numberOf Black Tower) +
-                      3 * fromIntegral (numberOf White Bishop - numberOf Black Bishop) +
-                      2.8 * fromIntegral (numberOf White Knight - numberOf Black Knight) +
-                      1 * fromIntegral (numberOf White Pawn - numberOf Black Pawn) +
-                      0.1 * fromIntegral (length $ teamMovements board color))
-                   in materialScore * who2Move
 
 ---------
 --Private

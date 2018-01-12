@@ -6,6 +6,7 @@ import qualified Chesssimple.Player as Player
 import qualified Chesssimple.Board  as Board
 import qualified Chesssimple.Color  as Color
 import qualified Chesssimple.GameAI as GameAI
+import qualified Chesssimple.BoardAI as BoardAI
 
 import qualified Data.List as List
 import Data.Maybe (catMaybes)
@@ -20,8 +21,8 @@ instance Show Game where
   show Game {player1=_, player2=_, plays=plays} = show $ head plays
 
 instance GameAI.ZeroSumGame Game where
-  isGameOver              = isCheckMate
-  evaluateGame game       = Board.evaluateBoard (currentBoard game) (turn game)
+  isGameOver        = isCheckMate
+  evaluateGame game = BoardAI.evaluateBoard (currentBoard game) (turn game)
   availableMovements game =
     let allPossibilities = Board.possibleMovementsForeachTeamPosition (currentBoard game) (turn game)
      in catMaybes $ concatMap (\(src, possibleDsts) -> map (\dst -> tryMovement game src dst) possibleDsts) allPossibilities
@@ -53,7 +54,7 @@ isInitial :: Game -> Bool
 isInitial game = length (plays game) == 1
 
 isCheckMate :: Game -> Bool
-isCheckMate game = isCheck game && (null $ allTeamAvailableMovements game)
+isCheckMate game = Board.isCheckMate (currentBoard game) (turn game)
 
 isCheck :: Game -> Bool
 isCheck game = Board.isCheck (currentBoard game) (turn game)
@@ -65,9 +66,6 @@ tryMovement game src dst = case Board.movePiece (currentBoard game) (turn game) 
 
 availableMovements :: Game -> Board.Position -> [Board.Position]
 availableMovements game position = Board.freeMovements (currentBoard game) (turn game) position
-
-allTeamAvailableMovements :: Game -> [Board.Position]
-allTeamAvailableMovements game = Board.teamMovements (currentBoard game) (turn game)
 
 new' :: Player.Player -> Player.Player -> [Board.Board] -> Color.Color -> Game
 new' p1 p2 plays color = Game { player1 = p1

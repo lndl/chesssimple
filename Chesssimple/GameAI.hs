@@ -4,7 +4,9 @@ import Data.List (maximumBy)
 import Data.Ord  (compare)
 
 class ZeroSumGame zsg where
-  evaluateGame       :: zsg -> Float -- IMPORTANT: this function MUST return a score relative to the side to being evaluated
+ -- IMPORTANT: 'evaluateGame' function MUST return a score relative to the side to being evaluated.
+ -- ie: a positive number is a game favourable to the player that currently needs to move.
+  evaluateGame       :: zsg -> Int
   availableMovements :: zsg -> [zsg]
   isGameOver         :: zsg -> Bool
 
@@ -18,7 +20,7 @@ negamax game depth =
       bestMovComparator = \(_, nma) (_, nmb)  -> compare nma nmb
    in fst $ maximumBy bestMovComparator candidateMovs
 
-negamaxScore :: (ZeroSumGame zsg) => zsg -> Integer -> Float
+negamaxScore :: (ZeroSumGame zsg) => zsg -> Integer -> Int
 negamaxScore game depth
   | depth == 0 || isGameOver game = evaluateGame game
   | otherwise  = let negamaxDepthEvaluator = \candidateGame -> - negamaxScore candidateGame (depth - 1)
