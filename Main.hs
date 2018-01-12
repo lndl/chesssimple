@@ -34,14 +34,14 @@ printGameLayout game = do
   Screen.setCursor 2 0
   Screen.clearUntilEnd
   putStrLn $ Game.show game
-  Screen.printWithColor (colorTurn game ++ " moves." ++ showCheckStatus game) "white"
-  putStrLn "Commands are: exit, which, move, undo"
+  Screen.printWithColor (colorTurn game ++ " moves..." ++ showCheckStatus game) "white"
 
 performGamePlay :: Game.Game -> Player.Player -> IO ()
 performGamePlay game (Player.ComputerPlayer strength _) =
   let updatedGame = GameAI.performMovement game strength
    in performGameTurn updatedGame
 performGamePlay game (Player.HumanPlayer name _)    = do
+  putStrLn "Commands are: exit, which, move, undo"
   userInput <- getLine
   case parseCommand userInput of
     ("exit" ,         _) -> return ()
