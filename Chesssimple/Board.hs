@@ -205,7 +205,7 @@ _knightFreeMovements board turn position =
 
 _pawnFreeMovements :: Board -> Color -> Position -> [Position]
 _pawnFreeMovements board turn (x,y) =
-  let unboundedNormalPositions     = filter (\pos -> not $ isPositionOccupiedByEnemy board turn pos) $ concat $ allMovements pawnPiece (x,y)
+  let unboundedNormalPositions     = takeWhile (isSquareFree board) $ concat $ allMovements pawnPiece (x,y)
       unboundedCapturablePositions =
         pipelineFilter [(isPositionOccupiedByEnemy board turn), isInsideBoard] [(x+forwardDir, y-1), (x+forwardDir, y+1)]
    in unboundedNormalPositions ++ unboundedCapturablePositions
