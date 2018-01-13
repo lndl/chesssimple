@@ -22,12 +22,11 @@ main =
      performGameTurn game
 
 performGameTurn :: Game.Game -> IO ()
-performGameTurn game
-  | Game.isCheckMate game = do
-      Screen.printWithColor ("Game finished! " ++ colorTurn game ++ " loses!") "red"
-  | otherwise            = do
-      printGameLayout game
-      performGamePlay game $ Game.whoPlaysNow game
+performGameTurn game = do
+  printGameLayout game
+  case Game.isCheckMate game of
+    True  -> Screen.printWithColor ("Game finished! " ++ colorTurn game ++ " loses!") "red"
+    False -> performGamePlay game $ Game.whoPlaysNow game
 
 printGameLayout :: Game.Game -> IO ()
 printGameLayout game = do
