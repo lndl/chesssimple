@@ -14,7 +14,7 @@ import Data.List.Split (splitOn)
 main :: IO ()
 main =
   let player1 = Player.mkHumanPlayer "Lautaro" White
-      player2 = Player.mkComputerPlayer 2 Black
+      player2 = Player.mkComputerPlayer 3 Black
       game    = Game.new player1 player2
    in do
      Screen.reset
