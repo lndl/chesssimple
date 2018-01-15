@@ -47,8 +47,11 @@ currentBoard :: Game -> Board.Board
 currentBoard game = head $ plays game
 
 whoPlaysNow :: Game -> Player.Player
-whoPlaysNow game = if turn game == Color.White && (Player.color $ player1 game) == Color.White then player1 game
-                                                                                               else player2 game
+whoPlaysNow game = if turn game == Color.White then playerWithColor Color.White game
+                                               else playerWithColor Color.Black game
+  where
+    playerWithColor color game = if (Player.color $ player1 game) == color then player1 game
+                                                                           else player2 game
 
 isInitial :: Game -> Bool
 isInitial game = length (plays game) == 1

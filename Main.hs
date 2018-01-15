@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
 import qualified Chesssimple.Game   as Game
@@ -10,16 +11,51 @@ import Chesssimple.Color
 import Data.Char (digitToInt)
 import Data.List (intercalate)
 import Data.List.Split (splitOn)
+import System.Console.CmdArgs
+
+--- Command arguments definitions
+
+data Args = HvH { p1name :: String, p1color :: String, p2name :: String      }
+          | HvC { hname :: String,  hcolor :: String,  cstrength :: Integer }
+          | CvC { p1strength :: Integer, p2strength :: Integer }
+            deriving (Show, Data, Typeable)
+
+humanvshuman = HvH {
+  p1name  = "Player 1" &= help "The player 1's name",
+  p1color = "white"    &= help "The player 1's color",
+  p2name  = "Player 2" &= help "The player 2's name"
+}
+
+humanvscomputer = HvC {
+  hname      = "Player 1" &= help "The human player's name",
+  hcolor     = "white"    &= help "The human player's color",
+  cstrength  = 3          &= help "The computer player's strength"
+}
+
+computervscomputer = CvC {
+  p1strength  = 3       &= help "The player 1's strength",
+  p2strength  = 3       &= help "The player 2's strength"
+}
+
+parseColor :: String -> Color
+parseColor "black" = Black
+parseColor "white" = White
+
+playersFromArgs :: Args -> (Player.Player, Player.Player)
+playersFromArgs HvH{p1name=p1n, p1color=p1c, p2name=p2n} = (Player.mkHumanPlayer p1n (parseColor p1c), Player.mkHumanPlayer    p2n (switch $ parseColor p1c))
+playersFromArgs HvC{hname=hn, hcolor=hc, cstrength=cs}   = (Player.mkHumanPlayer hn (parseColor hc),   Player.mkComputerPlayer cs  (switch $ parseColor hc))
+playersFromArgs CvC{p1strength=p1s, p2strength=p2s}      = (Player.mkComputerPlayer p1s White, Player.mkComputerPlayer p2s Black)
+
+--- Start of the program
 
 main :: IO ()
-main =
-  let player1 = Player.mkHumanPlayer "Lautaro" White
-      player2 = Player.mkComputerPlayer 2 Black
-      game    = Game.new player1 player2
-   in do
-     Screen.reset
-     Screen.printWithColor "Welcome to Simple Chess Game" "white"
-     performGameTurn game
+main = do
+  arguments <- cmdArgs (modes [humanvshuman, humanvscomputer &= auto, computervscomputer] &= program "Chesssimple" &= help "Chess game & engine")
+  Screen.reset
+  Screen.printWithColor "Welcome to Simple Chess Game" "white"
+  let (player1, player2) = playersFromArgs arguments
+      game               = Game.new player1 player2
+   in performGameTurn game
 
 performGameTurn :: Game.Game -> IO ()
 performGameTurn game = do
