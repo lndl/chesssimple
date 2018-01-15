@@ -23,7 +23,7 @@ instance Show Game where
 instance GameAI.ZeroSumGame Game where
   isGameOver        = isCheckMate
   evaluateGame game = BoardAI.evaluateBoard (currentBoard game) (turn game)
-  availableMovements game =
+  nextGames game =
     let allPossibilities = Board.possibleMovementsForeachTeamPosition (currentBoard game) (turn game)
      in catMaybes $ concatMap (\(src, possibleDsts) -> map (\dst -> tryMovement game src dst) possibleDsts) allPossibilities
 
