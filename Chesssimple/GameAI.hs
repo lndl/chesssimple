@@ -1,6 +1,6 @@
 module Chesssimple.GameAI ( ZeroSumGame, evaluateGame, nextGames, isGameOver, performMovement ) where
 
-import Data.List (minimumBy)
+import Data.List (minimumBy, maximumBy, sortBy)
 import Data.Ord  (compare)
 import Data.Tree
 
@@ -12,21 +12,36 @@ class ZeroSumGame zsg where
   isGameOver    :: zsg -> Bool
 
 performMovement :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
-performMovement game strength = bestGame $ [(possibleGame, computeMimimax strength possibleGame) | possibleGame <- bestNextGames game]
+performMovement game strength = bestGame $ [(possibleGame, computeNegamax strength possibleGame) | possibleGame <- nextGames game]
   where bestGame = fst.minimumBy (\(_,score1) (_,score2) -> compare score1 score2)
 
-computeMimimax :: (ZeroSumGame zsg) => Integer -> zsg -> Int
-computeMimimax depth = minimax.fmap evaluateGame.(choptree depth).gametree
+computeNegamax :: (ZeroSumGame zsg) => Integer -> zsg -> Int
+computeNegamax depth = negamax.fmap evaluateGame.(choptree depth).gametree
 
-bestNextGames :: (ZeroSumGame zsg) => zsg -> [zsg]
-bestNextGames game = nextGames game
+negamax :: (Tree Int) -> Int
+negamax = maximum.negamax'
 
-minimax :: (Tree Int) -> Int
-minimax (Node x []) = x
-minimax (Node _ lt) = negate.minimum.(fmap minimax) $ lt
+negamax' :: (Tree Int) -> [Int]
+negamax' (Node x []) = [x]
+negamax' (Node _ lt) = fmap negate $ mapmax (fmap negamax' lt)
+
+mapmax :: [[Int]] -> [Int]
+mapmax []       = []
+mapmax (xs:xss) = let max = maximum xs
+                   in max:(prune max xss)
+
+prune :: Int -> [[Int]] -> [Int]
+prune bound [] = []
+prune bound (xs:xss)
+  | isOutsideBound xs bound = prune bound xss
+  | otherwise               = mapmax (xs:xss)
+
+isOutsideBound :: [Int] -> Int -> Bool
+isOutsideBound [] _         = False
+isOutsideBound (x:xs) bound = if bound <= x then True else isOutsideBound xs bound
 
 gametree :: (ZeroSumGame zsg) => zsg -> Tree zsg
-gametree initial = reptree bestNextGames initial
+gametree initial = reptree nextGames initial
 
 -- Auxiliary function that yields a infinite tree from a function
 -- and an initial value or seed
