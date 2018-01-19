@@ -3,6 +3,7 @@ module Chesssimple.GameAI ( ZeroSumGame, evaluateGame, nextGames, isGameOver, pe
 import Data.List (minimumBy, maximumBy, sortBy)
 import Data.Ord  (compare)
 import Data.Tree
+import Control.Parallel.Strategies
 
 class ZeroSumGame zsg where
  -- IMPORTANT: 'evaluateGame' function MUST return a score relative to the side to being evaluated.
@@ -12,8 +13,9 @@ class ZeroSumGame zsg where
   isGameOver    :: zsg -> Bool
 
 performMovement :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
-performMovement game strength = bestGame $ [(possibleGame, computeNegamax strength possibleGame) | possibleGame <- nextGames game]
-  where bestGame = fst.minimumBy (\(_,score1) (_,score2) -> compare score1 score2)
+performMovement game strength = bestGame (allPossibleGames `using` parList rpar)
+  where bestGame         = fst.minimumBy (\(_,score1) (_,score2) -> compare score1 score2)
+        allPossibleGames = [(possibleGame, computeNegamax strength possibleGame) | possibleGame <- nextGames game]
 
 computeNegamax :: (ZeroSumGame zsg) => Integer -> zsg -> Int
 computeNegamax depth = negamax.fmap evaluateGame.(choptree depth).gametree
