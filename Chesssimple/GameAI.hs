@@ -5,7 +5,7 @@ import Data.Ord  (compare)
 import Data.Tree
 import Control.Parallel.Strategies
 
-class ZeroSumGame zsg where
+class (NFData zsg) => ZeroSumGame zsg where
  -- IMPORTANT: 'evaluateGame' function MUST return a score relative to the side to being evaluated.
  -- ie: a positive number is a game favourable to the player that currently needs to move.
   evaluateGame  :: zsg -> Int
@@ -13,7 +13,7 @@ class ZeroSumGame zsg where
   isGameOver    :: zsg -> Bool
 
 performMovement :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
-performMovement game strength = bestGame (allPossibleGames `using` parList rpar)
+performMovement game strength = bestGame (allPossibleGames `using` parList rdeepseq)
   where bestGame         = fst.minimumBy (\(_,score1) (_,score2) -> compare score1 score2)
         allPossibleGames = [(possibleGame, computeNegamax strength possibleGame) | possibleGame <- nextGames game]
 
