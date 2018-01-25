@@ -40,12 +40,6 @@ newBoard = matrix 8 8
 newBoardFromList :: [Square] -> Board
 newBoardFromList sqrs = fromList 8 8 sqrs
 
-----------------------------------------------
-  -- Utils (TODO: Pull out to external module)
-----------------------------------------------
-pipelineFilter :: [a -> Bool] -> [a] -> [a]
-pipelineFilter filters elements  = foldr (\currentFilter elements -> filter currentFilter elements) elements filters
-
 ----------------
 -- Board Layouts
 ----------------
@@ -206,8 +200,7 @@ _knightFreeMovements board turn position =
 _pawnFreeMovements :: Board -> Color -> Position -> [Position]
 _pawnFreeMovements board turn (x,y) =
   let unboundedNormalPositions     = takeWhile (isSquareFree board) $ concat $ allMovements pawnPiece (x,y)
-      unboundedCapturablePositions =
-        pipelineFilter [(isPositionOccupiedByEnemy board turn), isInsideBoard] [(x+forwardDir, y-1), (x+forwardDir, y+1)]
+      unboundedCapturablePositions = filter (isPositionOccupiedByEnemy board turn) $ filter isInsideBoard $ [(x+forwardDir, y-1), (x+forwardDir, y+1)]
    in unboundedNormalPositions ++ unboundedCapturablePositions
   where
     forwardDir     = if (isColor White pawnPiece) then -1 else 1
@@ -257,9 +250,7 @@ queenMovements :: Position -> [[Position]]
 queenMovements (i,j) = bishopMovements (i,j) ++ towerMovements (i,j)
 
 kingMovements :: Position -> [[Position]]
-kingMovements (i,j) = let firstSteps = \positions -> if null positions
-                          then []
-                          else [head positions]
+kingMovements (i,j) = let firstSteps = \positions -> if null positions then [] else [head positions]
                        in map firstSteps $ queenMovements (i,j)
 
 knightMovements :: Position -> [[Position]]
