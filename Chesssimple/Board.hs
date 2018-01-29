@@ -20,7 +20,7 @@ data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq)
 data ColouredPiece = CP (Color, Piece) deriving (Eq)
 
 instance Show Square where
-  show BlankSquare         = "…"
+  show BlankSquare         = "_"
   show (OccupiedSquare cp) = show cp
 
 instance Show ColouredPiece where
@@ -74,8 +74,13 @@ legalGrab board turn position = let square = safeGet (fst position) (snd positio
 movePiece :: Board -> Color -> Position -> Position -> Maybe Board
 movePiece board turn src dst = let availableMovements = freeMovements board turn src
                                 in if dst `elem` availableMovements
-                                   then Just $ placePiece board src dst
+                                   then Just $ treatPromotions $ placePiece board src dst
                                    else Nothing
+
+treatPromotions :: Board -> Board
+treatPromotions board = mapRow (promotePawns White) 1 $ mapRow (promotePawns Black) 8 board
+  where promotePawns color = \_ square -> if isSquareOccupiedByPiece color Pawn square then OccupiedSquare (CP (color, Queen))
+                                                                                       else square
 
 placePiece :: Board -> Position -> Position -> Board
 placePiece board positionFrom positionTo =
@@ -160,6 +165,10 @@ color BlankSquare                      = Nothing
 isSquareOccupiedBy :: Color -> Square -> Bool
 isSquareOccupiedBy color BlankSquare = False
 isSquareOccupiedBy color square      = isColor color $ piece square
+
+isSquareOccupiedByPiece :: Color -> Piece -> Square -> Bool
+isSquareOccupiedByPiece color piece BlankSquare                = False
+isSquareOccupiedByPiece color piece (OccupiedSquare (CP (c, p))) = color == c && piece == p
 
 isSquareOccupiedByEnemy :: Square -> Color -> Bool
 isSquareOccupiedByEnemy (OccupiedSquare (CP (Black, _))) White = True
