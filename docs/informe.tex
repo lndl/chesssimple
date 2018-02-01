@@ -27,32 +27,34 @@
 \maketitle
 
 \begin{abstract}
-* TODO: Aca iria el abstract del trabajo práctico *
-\keywords{Ajedrez, IA, }
+* TODO: Aca iria el abstract del trabajo práctico. Lo dejo para el final *
+\keywords{Ajedrez, IA, * TODO: más etiquetas para completar * }
 \end{abstract}
 %
 \section{Introducción}
 %
 
-La idea del presente trabajo es recrear un juego de ajedrez que permita enfrentamientos contra oponentes humanos y openentes simulados mediante IA. El espíritu de este desarrollo es mantener siempre la simpleza en el diseño y la implementación de manera de tal de poder explicar con relativa fluidez los conceptos involucrados -especialmente en la IA- y que sirva de modelo inicial para futuras iteraciones más sofisticadas.
+La idea del presente trabajo es recrear un juego de ajedrez que permita realizar enfrentamientos contra oponentes humanos y openentes simulados mediante IA. El espíritu de este desarrollo es mantener en todo momento, y en la medida de lo posible, la simpleza tanto en el diseño como en la implementación de la solución, de manera tal de poder explicar con relativa fluidez los conceptos involucrados -especialmente en la IA- y que sirva de modelo inicial para futuras iteraciones más sofisticadas.
 
 \subsection{Motivación}
 \label{subsec:Motivacion}
 
-La motivación es, principalmente, la suma de dos inquietudes: por un lado, el arrancar un proyecto medianamente serio usando conceptos puros de programación funcional -y Haskell como medio para cumplir estrictamente con dicha premisa-; y por otro lado, el entender de manera clara cómo es la logica de los algoritmos de IA y tratar de aislar esta parte del resto de la aplicación de manera tal de poder generalizarla y usarla potencialmente en otros juegos.
+La motivación es, principalmente, la suma de dos inquietudes: por un lado, el arrancar un proyecto medianamente serio usando conceptos puros de programación funcional -y Haskell como medio para cumplir estrictamente con dicha premisa-; y por otro lado, el entender de manera clara cómo son los algoritmos de IA y tratar de aislar esta lógica del resto de la aplicación de manera tal de poder generalizarla y usarla potencialmente en otros juegos.
+
 Posteriormente, la idea es publicar el proyecto en un repositorio abierto (por ejemplo, Github) para que la comunidad pueda aprovecharlo, e idealmente, extenderlo con nuevas ideas, correcciones o mejoras.
 
 \subsection{Estructura del trabajo}
 \label{subsec:Estructura trabajo}
 
-*TODO: Comentar la estructura del trabajo*
+*TODO: Comentar la estructura del trabajo. Lo dejo para el final ya que no lo tengo totalmente definido*
 
 \section{Presentación e interfaz de la aplicación}
 
-Ante todo, es relevante mencionar que se puso más énfasis en la lógica del juego y en la modularización del mismo de manera tal que el desarrollar otra GUI más atractiva sea una tarea relativamente sencilla. En el próxima apartado se detallará la estructura interna de la aplicación.
-Ahora sí, respecto a la presente interfaz se puede decir que es textual y la configuración depende de los parámetros pasados al programa, el cual es un comando UNIX. A continuación se presentará una salida típica de la ayuda que brinda esta utilidad:
+Ante todo, es relevante mencionar que se colocó más énfasis en la lógica del juego y en la modularización del mismo de forma tal que el desarrollar otra GUI más atractiva sea una tarea relativamente sencilla. En otro apartado se detallará la estructura interna de la aplicación.
 
-\begin{lstlisting}[backgroundcolor=\color{cyan}, language=bash, caption=Ayuda de la aplicación label={lst:ayuda_programa}]
+Ahora sí, respecto a la presente interfaz se puede decir que es textual y la configuración depende de los parámetros pasados al programa, el cual funciona como un comando UNIX. A continuación se presentará una salida típica de la ayuda que brinda esta utilidad:
+
+\begin{lstlisting}[backgroundcolor=\color{lightgray}, language=bash, caption=Ayuda de la aplicación, label={lst:ayuda_programa}]
 > ./chesssimple --help
 The Chesssimple program
 
@@ -83,9 +85,9 @@ Chesssimple cvc [OPTIONS]
 
 La aplicación dispone de 3 modos de juego: \textit{humano vs computadora} -el cual es el modo por defecto-, \textit{humano vs humano} y \textit{computadora vs computadora}. Cada uno de los modos cuenta además con parámetros de configuración específicos para elegir con qué bando jugar -blancas o negras- y, para el caso de los jugadores por CPU, la dificultad o fuerza con la que contará. Vale la pena mencionar que todos estas opciones cuentan también con valores predefinidos.
 
-Una vez iniciada la aplicación, la misma se verá de la siguiente manera:
+Una vez iniciada la aplicación, se verá la interfaz principal de la siguiente manera:
 
-\begin{lstlisting}[backgroundcolor=\color{cyan}, language=bash, caption=Interfaz principal del programa, label={lst:interfaz_principal}]
+\begin{lstlisting}[backgroundcolor=\color{lightgray}, language=bash, caption=Interfaz principal del programa, label={lst:interfaz_principal}]
 Welcome to Simple Chess Game
 
 ( -T  _ -B -Q -K -B -N -T )
@@ -102,7 +104,7 @@ Commands are: exit, which, move, undo
 _
 \end{lstlisting}
 
-En dónde se encuentra el tablero y las pieces representadas por una matriz de caracteres, donde el significado para cada una de ellas es:
+Lo que se representa es el tablero y las piezas a través de una matriz de caracteres, donde el significado para cada una de ellas es:
 \newline
 
 \setlength{\tabcolsep}{20pt}
@@ -132,19 +134,30 @@ Y los colores se representan como:
 \newline
 \newline
 
-En cuanto a la notación posicional se puede mencionar que es totalmente numérica, es decir, cada casillero o escaque se identifica por el número de fila y de columna entre el 1 y el 8, siendo 11 la casilla superior izquierda y 88 la casilla inferior derecha, con lo cual, la numeración incrementa hacia la derecha -para el caso de las columnas- y hacia abajo -para el caso de las filas-. A modo de ejmplo, en la posicional inicial de ajedrez (desde la perspectiva del tablero en \ref{lst:interfaz_principal}), peón blanco movió desde 74 a 54 y el caballo negro movió desde 12 a 33.
+En cuanto a la notación posicional se puede mencionar que es totalmente numérica; es decir, cada casillero o escaque se identifica por el número de fila y de columna entre el 1 y el 8, siendo 11 la casilla superior izquierda y 88 la casilla inferior derecha, con lo cual, la numeración incrementa hacia la derecha -para el caso de las columnas- y hacia abajo -para el caso de las filas-. A modo de ejemplo, en la posicional inicial de ajedrez (dada la perspectiva del tablero en \ref{lst:interfaz_principal}), el peón blanco movió desde 74 a 54 y el caballo negro movió desde 12 a 33.
 
 La mecánica del juego consiste, para un jugador humano, en introducir comandos. Los disponibles actualmente son:
 \newline
 
 \begin{labeling}{which}
-  \item [move] Este es claramente el comando principal. Permite indicar una posición de partida y una de destino utilizando la notación previamente comentada. Por ejemplo, \textit{move 74 54} mueve el peón blanco de la columna 4 dos casilleros hacia adelante.
+  \item [move] Este es claramente el comando principal. Permite indicar una posición de partida y una de destino utilizando la notación previamente comentada. Por ejemplo, \textit{move 74 54} mueve el peón blanco de la columna 4 dos escaques hacia adelante.
 
     Si la posición es inválida (porque está mal escrita, fuera de los límites del tablero, o el casillero no tiene una ficha correspondiente al bando propio), el comando se cancela.
-  \item[which] Dada la posición de una pieza del bando propio, lista todas las posiciones a las cuales podría moverse. Similar al \textit{move}, no dará ningún resultado si la posición es inválida. Además tampoco dará resultados si la posición está en jaque y la pieza candidata a mover no puede contrarrestar esa situación. Por ejemplo, para el alfin blanco ubicado en 83 en la figura \ref{lst:interfaz_principal}, los movimientos disponibles arrojados por el comando son: 74, 65, 56, 47, 38
+  \item[which] Dada la posición de una pieza del bando propio, lista todas las posiciones a las cuales podría moverse. Similar al \textit{move}, no dará ningún resultado si la posición es inválida. Además tampoco dará resultados si la posición está en jaque y la pieza candidata a mover no puede contrarrestar esa situación.
+
+    Por ejemplo, para el alfin blanco ubicado en 83 en la figura \ref{lst:interfaz_principal}, los movimientos disponibles arrojados por el comando son: 74, 65, 56, 47, 38
   \item[undo] Deshace un turno completo, es decir, el turno del rival y el propio. Por ejemplo, para la situación planteada en la figura \ref{lst:interfaz_principal}, ejecutar \textit{undo} llevaría el juego a la posición inicial nuevamente.
   \item[exit] Sale del programa.
 \end{labeling}
+
+Si ambos jugadores son humanos, cada uno dispondrá de esta interfaz para introducir sus movimientos. En cambio, si juega la computadora, se mostrará un cartel de espera mientras la CPU procesa su jugada, hasta realizar su movimiento.
+
+Para cualquiera de los modos, el juego se desarrolla normalmente. Los casos especiales a destacar son:
+
+\begin{enumerate}
+  \item \textbf{Jaque}: Tal situación es informada por el programa en el momento en que un bando debe realizar su jugada y, en concordancia con las reglas del ajedrez, sólo se permitirá el movimiento de aquellas piezas que hagan que dicho bando salga del jaque. En otras palabras, cualquier otra jugada que no pueda cancelar el jaque, es considerada inválida.
+  \item \textbf{Jaque mate}: Continuando la definición anterior, si se detecta que no hay jugadas para salir del jaque, automáticamente el juego termina con jaque mate y un cartel informando que el bando que tenía que jugar perdió la partida.
+\end{enumerate}
 
 %
 % ---- Bibliography ----
@@ -153,7 +166,9 @@ La mecánica del juego consiste, para un jugador humano, en introducir comandos.
   \bibitem[1]{whyfunctional}
   John Hughes - "Why functional programming matters"
   \bibitem[2]{introfunctional}
-  Richard Bird, Philip Wadler - "Introduction to Functional Programming"
+  Richard Bird, Philip Wadler - Introduction to Functional Programming"
+  \bibitem[?]{lalalala}
+    * TODO - Faltan más *
 \end{thebibliography}
 
 \end{document}
