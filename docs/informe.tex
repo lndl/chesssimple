@@ -54,7 +54,7 @@ Ante todo, es relevante mencionar que se colocó más énfasis en la lógica del
 
 Ahora sí, respecto a la presente interfaz se puede decir que es textual y la configuración depende de los parámetros pasados al programa, el cual funciona como un comando UNIX. A continuación se presentará una salida típica de la ayuda que brinda esta utilidad:
 
-\begin{lstlisting}[backgroundcolor=\color{lightgray}, language=bash, caption=Ayuda de la aplicación, label={lst:ayuda_programa}]
+\begin{lstlisting}[frame=single, language=bash, caption=Ayuda de la aplicación, label={lst:ayuda_programa}]
 > ./chesssimple --help
 The Chesssimple program
 
@@ -87,7 +87,7 @@ La aplicación dispone de 3 modos de juego: \textit{humano vs computadora} -el c
 
 Una vez iniciada la aplicación, se verá la interfaz principal de la siguiente manera:
 
-\begin{lstlisting}[backgroundcolor=\color{lightgray}, language=bash, caption=Interfaz principal del programa, label={lst:interfaz_principal}]
+\begin{lstlisting}[frame=single, language=bash, caption=Interfaz principal del programa, label={lst:interfaz_principal}]
 Welcome to Simple Chess Game
 
 ( -T  _ -B -Q -K -B -N -T )
@@ -159,6 +159,163 @@ Para cualquiera de los modos, el juego se desarrolla normalmente. Los casos espe
   \item \textbf{Jaque mate}: Continuando la definición anterior, si se detecta que no hay jugadas para salir del jaque, automáticamente el juego termina con jaque mate y un cartel informando que el bando que tenía que jugar perdió la partida.
 \end{enumerate}
 
+\section{Diseño e implementación}
+
+En esta sección se dará un pantallazo general y completo de la arquitectura de la aplicación. \textit{Grosso modo}, el proyecto se divide lógicamente en:
+
+\begin{itemize}
+  \item Módulo principal de interfaz.
+  \item Módulos de lógica y reglas del juego.
+  \item Módulo de IA
+  \item Tests
+\end{itemize}
+
+Cada una de las partes será explicada detalladamente en las próximas secciones. Vale recalcar que esta división se justifica en el hecho de que cada una de estas partes pueden ser sustituidas por otras sin afectar al resto del sistema. Como ejemplos, se pueden mencionar:
+
+\begin{itemize}
+  \item Cambiar el módulo de interfaz por una API web que sirva el estado de la aplicación y sea mostrado por un cliente corriendo en un navegador web.
+  \item Cambiar, sumar o corregir reglas y/o estrategias del juego sin que impacte demasiado en el resto de los componentes.
+  \item Cambiar y/o mejorar el motor y los algoritmos de IA con el objeto de tener distintos o mejores resultados para los contrincantes por CPU de forma totalmente transparente al funcionamiento del juego.
+  \item Sumar o corregir tests en pos de mejorar la cobertura o la calidad de los mismos.
+\end{itemize}
+
+\subsection{Estructura del sistema según los tipos}
+
+Antes de explicar cada una de las partes conformantes de la aplicación, será conveniente mostrar los tipos algebraicos empleados con el fin de mostrar un panorama general del sistema -y especialmente de la lógica del juego- para luego facilitar el desarrollo puntual de cada uno de los módulos.
+
+Como se anticipó en la introducción del presente informe, la idea fue pensar y modelar una representación sencilla del juego.
+
+El módulo del juego es, valga la redundancia, \textit{Game}. La forma de su tipo es:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Game, label={lst:tipo_game}]
+data Game = Game { player1 :: Player.Player
+                 , player2 :: Player.Player
+                 , plays   :: [Board.Board]
+                 , turn    :: Color.Color
+                 }
+\end{lstlisting}
+
+Tal como se observa, es un registro (o \textit{product type}) que encapsula una partida de ajedrez: hay dos jugadores -\textit{player1} y \textit{player2}-, una lista de tableros (\textit{Board}) para representar la traza de las jugadas y un indicador de turno (a través de \textit{Color}) para saber qué jugador es el próximo en mover.
+
+Los jugadores (\textit{Player}) son de la siguiente forma:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Player, label={lst:tipo_player}]
+data Player =
+  HumanPlayer    { name     :: String,  color :: Color } |
+  ComputerPlayer { strength :: Integer, color :: Color }
+  deriving (Show)
+\end{lstlisting}
+
+El jugador es una unión (o \textit{sum type}) de registros en donde la idea es diferenciar a los jugadores humanos y a los jugadores por computadora, no sólo por los atributos de cada uno, sino además, por la lógica particular de cada uno al momento de interactuar con el juego.
+
+El último tipo relevante es el tablero (\textit{Board}) que, en realidad, va a contener otros tipos internos, a saber:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Board y derivados, label={lst:tipo_board}]
+type Board         = Matrix Square
+data Square        = BlankSquare |
+                       OccupiedSquare ColouredPiece
+                         deriving (Eq)
+data ColouredPiece = CP (Color, Piece) deriving (Eq)
+data Piece         = Pawn  | Knight | Bishop | Tower |
+                     Queen | King deriving (Eq)
+type Position      = (Int, Int)
+\end{lstlisting}
+
+El tablero es una matriz de casilleros o escaques (\textit{Square}), en donde cada uno de ellos, o bien, está vacío (\textit{BlankSquare}), o bien, está ocupado por una pieza de color, esta última representada por una tupla cuyo primer componente es el color al bando al que pertenece (\textit{Color}) y cuyo segundo componente es la pieza en sí (\textit{Piece}). La posición es simplemente una coordenada de números para ubicar casilleros en el tablero.
+
+\subsection{Modulo principal (\textit{Main.hs})}
+
+A continuación se arrancará con el módulo de inicio de la aplicación. Como ya se ha mencionado, este componente se encarga de presentar una interfaz de interacción hacia el usuario, y para ello, se hace uso exhaustivo de la entrada/salida de la consola; consecuentamente -desde Haskell- se utiliza la mónada IO.
+
+El punto de entrada \textit{main} es el siguiente:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Punto de entrada de la aplicación, label={lst:punto_entrada}]
+main :: IO ()
+main = do
+  arguments <- cmdArgs (modes [humanvshuman,
+    humanvscomputer &= auto, computervscomputer] &=
+    program "Chesssimple" &= help "Chess game & engine")
+  Screen.reset
+  Screen.printWithColor "Welcome to Simple Chess Game"
+    "white"
+  let (player1, player2) = playersFromArgs arguments
+      game               = Game.new player1 player2
+   in performGameTurn game
+\end{lstlisting}
+
+Todo \textit{main} en Haskell es de tipo IO () dado que es un programa ejecutable y, por tanto, recibe y envía información desde y hacia el mundo exterior, en particular, el sistema operativo que lo invoca.
+
+Está escrita con \textit{do-notation} dado que se realizan varios pasos que imprimen alguna clase de efecto lateral sobre el denominado mundo exterior: la primera línea hace uso de una función \textit{cmdArgs} de un paquete homónimo cuyo próposito es procesar los argumentos que recibe el programa. En este caso particular, recibe en ellos las características de los jugadores que participarán en la partida, las cuales se han descrito previamente (ver figura \ref{lst:ayuda_programa}). Posteriormente se usan esos datos para crear un juego con dos jugadores e iniciar la partida.
+
+También se pueden ver en el medio algunas funciones accesorias como \textit{Screen.reset} y \textit{Screen.printWithColor}, que limpian la consola e imprimen letreros formateados con colores, respectivamente. Dichas funciones se encuentran encapsuladas en el módulo \textit{Screen}, y todas ellas operan con la salida a través de la mónada IO.
+
+El flujo de ejecución sigue con \textit{performGameTurn}:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Función performGameTurn, label={lst:perform_game_turn}]
+performGameTurn :: Game.Game -> IO ()
+performGameTurn game = do
+  printGameLayout game
+  case Game.isCheckMate game of
+    True  -> Screen.printWithColor
+      ("Game finished! " ++ colorTurn game ++ " loses!")
+        "red"
+    False -> performGamePlay game $ Game.whoPlaysNow game
+\end{lstlisting}
+
+Nuevamente se trabaja con la IO para imprimir el tablero en \textit{printGameLayout}. Esta función aprovecha que el tipo \textit{Game} y todos los tipos que los componenn son instancias de la clase \textit{Show} y, por ende, tienen una representación textual.
+
+Luego comprueba si el juego está en situación de "jaque mate", en cuyo caso, termina la partida, y si no, pasa a evaluar la función \textit{performGamePlay}:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Función performGamePlay, label={lst:perform_game_play}]
+performGamePlay :: Game.Game -> Player.Player -> IO ()
+performGamePlay game (Player.ComputerPlayer strength _) =
+  let updatedGame = GameAI.performMovement game strength
+   in performGameTurn updatedGame
+performGamePlay game (Player.HumanPlayer name _)    = do
+  putStrLn "Commands are: exit, which, move, undo"
+  userInput <- getLine
+  case parseCommand userInput of
+    ("exit" ,         _) -> return ()
+    ("which",     pos:_) -> do
+      Screen.printWithColor ("Available movements are: " ++
+        (showAvailableMovements game (parsePosition pos)))
+          "white"
+      Screen.pause
+      performGameTurn game
+    ("move" , src:dst:_) -> do
+      performMoveAction game (parsePosition src)
+        (parsePosition dst)
+    ("undo" ,         _) -> performUndoAction game
+    _ -> do
+      Screen.printError "Bad command. Try again."
+      performGameTurn game
+\end{lstlisting}
+
+Esta función hace uso del \textit{pattern matching} para discernir qué tipo de lógica ejecutar de acuerdo al tipo particular de un jugador: si es una computadora, delegará la jugada al motor de IA (\textit{GameAI}) -el cual se explicará en una sección posterior-, y si es un humano, hará uso una vez más de la entrada/salida para obtener un comando de la consola, procesarlo y determinar la acción a ejecutar en función de él. Todo esto es lo que se puede ver en la estructura \textit{case} de la función. Para cada uno de ellos se recuperan, opcionalmente, datos de utilidad y se suministran a las acciones correspondientes. Dado que el \textit{parseo} del comando puede fallar, se utiliza la mónada \textit{Maybe} para modelar tal efecto.
+
+Para concluir con este apartado, se mostrará a continuación la acción correspondiente al comando más relevante, \textit{move}:
+
+\begin{lstlisting}[frame=single, language=haskell, caption=Función performMoveAction asociada al comando move, label={lst:perform_move_action}]
+performMoveAction :: Game.Game -> Maybe Position ->
+                       Maybe Position -> IO ()
+performMoveAction game Nothing dst = do
+  Screen.printError "Bad source position"
+  performGameTurn game
+performMoveAction game src Nothing = do
+  Screen.printError "Bad destiny position"
+  performGameTurn game
+performMoveAction game (Just src) (Just dst) =
+  case (Game.tryMovement game src dst) of
+    Just nextGame -> performGameTurn nextGame
+    Nothing -> do
+      Screen.printError "Illegal movement. Try again."
+      performGameTurn game
+\end{lstlisting}
+
+Esta acción sólo se comunicará con el módulo principal del juego -\textit{Game}- en caso de tener validadas sintácticamente las posiciones de origen y de destino para mover una pieza. En cualquier otro caso se informará la condición del error.
+
+En caso de éxito se repetirá la ejecución de \textit{performGameTurn} con el estado del juego actualizado. En los casos de error se volverá a pedir un nuevo comando al usuario con exactamente el mismo juego. En cualquiera de los casos se puede ver que hay conformado un ciclo de acciones que solamente finaliza cuando se detecta que el juego ha terminado.
+
 %
 % ---- Bibliography ----
 %
@@ -167,6 +324,10 @@ Para cualquiera de los modos, el juego se desarrolla normalmente. Los casos espe
   John Hughes - "Why functional programming matters"
   \bibitem[2]{introfunctional}
   Richard Bird, Philip Wadler - Introduction to Functional Programming"
+  \bibitem[3]{howtowritehaskellprogram}
+    How to write a Haskell program - \url{https://wiki.haskell.org/How\_to\_write\_a\_Haskell\_program}
+  \bibitem[4]{ioinside}
+    IO inside - \url{https://wiki.haskell.org/IO\_inside}
   \bibitem[?]{lalalala}
     * TODO - Faltan más *
 \end{thebibliography}
