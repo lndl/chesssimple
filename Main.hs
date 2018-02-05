@@ -9,7 +9,7 @@ import Chesssimple.Board (Position)
 import Chesssimple.Color
 
 import Data.Char (digitToInt)
-import Data.List (intercalate)
+import Data.List (intercalate, elemIndex)
 import Data.List.Split (splitOn)
 import System.Console.CmdArgs
 
@@ -106,8 +106,18 @@ parseCommand userInput = let command:args = splitOn " " userInput
                           in (command, args)
 
 parsePosition :: String -> Maybe Position
-parsePosition pos = let a:b:_ = map digitToInt (take 2 pos)
-                     in Just (a,b)
+parsePosition pos = if length pos == 2
+                    then let a:b:_ = pos in parsePosition' a b
+                    else Nothing
+  where
+    parsePosition' column row = do
+      c <- (+1) <$> elemIndex column ['a'..'h']
+      r <- (+9) <$> negate <$> safeDigitToInt row
+      return (r, c)
+    safeDigitToInt r = if elem r ['1'..'8']
+                       then Just $ digitToInt r
+                       else Nothing
+  
 
 performMoveAction :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
 performMoveAction game Nothing dst = do
@@ -125,9 +135,11 @@ performMoveAction game (Just src) (Just dst) =
 
 showAvailableMovements :: Game.Game -> Maybe Position -> String
 showAvailableMovements game Nothing         = "No movements"
-showAvailableMovements game (Just position) = let movs = Game.availableMovements game position
-                                               in if null movs then "No movements"
-                                                               else intercalate ", " $ map show movs
+showAvailableMovements game (Just position) =
+  let movs = Game.availableMovements game position
+   in if null movs then "No movements"
+      else intercalate ", " $ map showPosition movs
+  where showPosition (r, c) = (['a'..'h'] !! (c - 1)):(show (9 - r))
 
 colorTurn :: Game.Game -> String
 colorTurn game = case Game.turn game of
