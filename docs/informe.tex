@@ -134,18 +134,18 @@ Y los colores se representan como:
 \newline
 \newline
 
-En cuanto a la notación posicional se puede mencionar que es totalmente numérica; es decir, cada casillero o escaque se identifica por el número de fila y de columna entre el 1 y el 8, siendo 11 la casilla superior izquierda y 88 la casilla inferior derecha, con lo cual, la numeración incrementa hacia la derecha -para el caso de las columnas- y hacia abajo -para el caso de las filas-. A modo de ejemplo, en la posicional inicial de ajedrez (dada la perspectiva del tablero en \ref{lst:interfaz_principal}), el peón blanco movió desde 74 a 54 y el caballo negro movió desde 12 a 33.
+En cuanto a la notación posicional se puede mencionar que es por coordenadas; es decir, cada casillero o escaque se identifica por el número de fila -entre 1 y 8, creciente hacia arriba- y por la letra de columna -entre \textit{a}  y \textit{h}, creciente hacia la derecha-. A modo de ejemplo, en la posicional inicial de ajedrez (dada la perspectiva del tablero en \ref{lst:interfaz_principal}), el peón blanco movió desde d2 a d4 y el caballo negro movió desde b8 a c6.
 
 La mecánica del juego consiste, para un jugador humano, en introducir comandos. Los disponibles actualmente son:
 \newline
 
 \begin{labeling}{which}
-  \item [move] Este es claramente el comando principal. Permite indicar una posición de partida y una de destino utilizando la notación previamente comentada. Por ejemplo, \textit{move 74 54} mueve el peón blanco de la columna 4 dos escaques hacia adelante.
+  \item [move] Este es claramente el comando principal. Permite indicar una posición de partida y una de destino utilizando la notación previamente comentada. Por ejemplo, \textit{move d2 d4} mueve el peón blanco de la columna \textit{d}  dos escaques hacia adelante.
 
     Si la posición es inválida (porque está mal escrita, fuera de los límites del tablero, o el casillero no tiene una ficha correspondiente al bando propio), el comando se cancela.
   \item[which] Dada la posición de una pieza del bando propio, lista todas las posiciones a las cuales podría moverse. Similar al \textit{move}, no dará ningún resultado si la posición es inválida. Además tampoco dará resultados si la posición está en jaque y la pieza candidata a mover no puede contrarrestar esa situación.
 
-    Por ejemplo, para el alfin blanco ubicado en 83 en la figura \ref{lst:interfaz_principal}, los movimientos disponibles arrojados por el comando son: 74, 65, 56, 47, 38
+    Por ejemplo, para el alfin blanco ubicado en c1 en la figura \ref{lst:interfaz_principal}, los movimientos disponibles arrojados por el comando son: d2, e3, f4, g5, h6
   \item[undo] Deshace un turno completo, es decir, el turno del rival y el propio. Por ejemplo, para la situación planteada en la figura \ref{lst:interfaz_principal}, ejecutar \textit{undo} llevaría el juego a la posición inicial nuevamente.
   \item[exit] Sale del programa.
 \end{labeling}
@@ -161,7 +161,7 @@ Para cualquiera de los modos, el juego se desarrolla normalmente. Los casos espe
 
 \section{Diseño e implementación}
 
-En esta sección se dará un pantallazo general y completo de la arquitectura de la aplicación. \textit{Grosso modo}, el proyecto se divide lógicamente en:
+En esta sección se dará un pantallazo general y completo de la arquitectura de la aplicación. A grandes rasgos, el proyecto se divide lógicamente en:
 
 \begin{itemize}
   \item Módulo principal de interfaz.
@@ -240,7 +240,7 @@ main = do
     "white"
   let (player1, player2) = playersFromArgs arguments
       game               = Game.new player1 player2
-   in performGameTurn game
+   in performGame game
 \end{lstlisting}
 
 Todo \textit{main} en Haskell es de tipo IO () dado que es un programa ejecutable y, por tanto, recibe y envía información desde y hacia el mundo exterior, en particular, el sistema operativo que lo invoca.
@@ -249,29 +249,29 @@ Está escrita con \textit{do-notation} dado que se realizan varios pasos que imp
 
 También se pueden ver en el medio algunas funciones accesorias como \textit{Screen.reset} y \textit{Screen.printWithColor}, que limpian la consola e imprimen letreros formateados con colores, respectivamente. Dichas funciones se encuentran encapsuladas en el módulo \textit{Screen}, y todas ellas operan con la salida a través de la mónada IO.
 
-El flujo de ejecución sigue con \textit{performGameTurn}:
+El flujo de ejecución sigue con \textit{performGame}:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Función performGameTurn, label={lst:perform_game_turn}]
-performGameTurn :: Game.Game -> IO ()
-performGameTurn game = do
+\begin{lstlisting}[frame=single, language=haskell, caption=Función performGame, label={lst:perform_game}]
+performGame :: Game.Game -> IO ()
+performGame game = do
   printGameLayout game
   case Game.isCheckMate game of
     True  -> Screen.printWithColor
       ("Game finished! " ++ colorTurn game ++ " loses!")
         "red"
-    False -> performGamePlay game $ Game.whoPlaysNow game
+    False -> performGameTurn game $ Game.whoPlaysNow game
 \end{lstlisting}
 
 Nuevamente se trabaja con la IO para imprimir el tablero en \textit{printGameLayout}. Esta función aprovecha que el tipo \textit{Game} y todos los tipos que los componenn son instancias de la clase \textit{Show} y, por ende, tienen una representación textual.
 
-Luego comprueba si el juego está en situación de "jaque mate", en cuyo caso, termina la partida, y si no, pasa a evaluar la función \textit{performGamePlay}:
+Luego comprueba si el juego está en situación de «jaque mate», en cuyo caso, termina la partida, y si no, pasa a evaluar la función \textit{performGameTurn}:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Función performGamePlay, label={lst:perform_game_play}]
-performGamePlay :: Game.Game -> Player.Player -> IO ()
-performGamePlay game (Player.ComputerPlayer strength _) =
+\begin{lstlisting}[frame=single, language=haskell, caption=Función performGameTurn, label={lst:perform_game_turn}]
+performGameTurn :: Game.Game -> Player.Player -> IO ()
+performGameTurn game (Player.ComputerPlayer strength _) =
   let updatedGame = GameAI.performMovement game strength
-   in performGameTurn updatedGame
-performGamePlay game (Player.HumanPlayer name _)    = do
+   in performGame updatedGame
+performGameTurn game (Player.HumanPlayer name _)    = do
   putStrLn "Commands are: exit, which, move, undo"
   userInput <- getLine
   case parseCommand userInput of
@@ -281,14 +281,14 @@ performGamePlay game (Player.HumanPlayer name _)    = do
         (showAvailableMovements game (parsePosition pos)))
           "white"
       Screen.pause
-      performGameTurn game
+      performGame game
     ("move" , src:dst:_) -> do
       performMoveAction game (parsePosition src)
         (parsePosition dst)
     ("undo" ,         _) -> performUndoAction game
     _ -> do
       Screen.printError "Bad command. Try again."
-      performGameTurn game
+      performGame game
 \end{lstlisting}
 
 Esta función hace uso del \textit{pattern matching} para discernir qué tipo de lógica ejecutar de acuerdo al tipo particular de un jugador: si es una computadora, delegará la jugada al motor de IA (\textit{GameAI}) -el cual se explicará en una sección posterior-, y si es un humano, hará uso una vez más de la entrada/salida para obtener un comando de la consola, procesarlo y determinar la acción a ejecutar en función de él. Todo esto es lo que se puede ver en la estructura \textit{case} de la función. Para cada uno de ellos se recuperan, opcionalmente, datos de utilidad y se suministran a las acciones correspondientes. Dado que el \textit{parseo} del comando puede fallar, se utiliza la mónada \textit{Maybe} para modelar tal efecto.
@@ -300,16 +300,16 @@ performMoveAction :: Game.Game -> Maybe Position ->
                        Maybe Position -> IO ()
 performMoveAction game Nothing dst = do
   Screen.printError "Bad source position"
-  performGameTurn game
+  performGame game
 performMoveAction game src Nothing = do
   Screen.printError "Bad destiny position"
-  performGameTurn game
+  performGame game
 performMoveAction game (Just src) (Just dst) =
   case (Game.tryMovement game src dst) of
-    Just nextGame -> performGameTurn nextGame
+    Just nextGame -> performGame nextGame
     Nothing -> do
       Screen.printError "Illegal movement. Try again."
-      performGameTurn game
+      performGame game
 \end{lstlisting}
 
 Esta acción sólo se comunicará con el módulo principal del juego -\textit{Game}- en caso de tener validadas sintácticamente las posiciones de origen y de destino para mover una pieza. En cualquier otro caso se informará la condición del error.
