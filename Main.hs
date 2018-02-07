@@ -55,14 +55,14 @@ main = do
   Screen.printWithColor "Welcome to Simple Chess Game" "white"
   let (player1, player2) = playersFromArgs arguments
       game               = Game.new player1 player2
-   in performGameTurn game
+   in performGame game
 
-performGameTurn :: Game.Game -> IO ()
-performGameTurn game = do
+performGame :: Game.Game -> IO ()
+performGame game = do
   printGameLayout game
   case Game.isCheckMate game of
     True  -> Screen.printWithColor ("Game finished! " ++ colorTurn game ++ " loses!") "red"
-    False -> performGamePlay game $ Game.whoPlaysNow game
+    False -> performGameTurn game $ Game.whoPlaysNow game
 
 printGameLayout :: Game.Game -> IO ()
 printGameLayout game = do
@@ -71,11 +71,11 @@ printGameLayout game = do
   putStrLn $ Game.show game
   Screen.printWithColor (colorTurn game ++ " moves..." ++ showCheckStatus game) "white"
 
-performGamePlay :: Game.Game -> Player.Player -> IO ()
-performGamePlay game (Player.ComputerPlayer strength _) =
+performGameTurn :: Game.Game -> Player.Player -> IO ()
+performGameTurn game (Player.ComputerPlayer strength _) =
   let updatedGame = GameAI.performMovement game strength
-   in performGameTurn updatedGame
-performGamePlay game (Player.HumanPlayer name _)    = do
+   in performGame updatedGame
+performGameTurn game (Player.HumanPlayer name _)    = do
   putStrLn "Commands are: exit, which, move, undo"
   userInput <- getLine
   case parseCommand userInput of
@@ -83,13 +83,13 @@ performGamePlay game (Player.HumanPlayer name _)    = do
     ("which",     pos:_) -> do
       Screen.printWithColor ("Available movements are: " ++ (showAvailableMovements game (parsePosition pos))) "white"
       Screen.pause
-      performGameTurn game
+      performGame game
     ("move" , src:dst:_) -> do
       performMoveAction game (parsePosition src) (parsePosition dst)
     ("undo" ,         _) -> performUndoAction game
     _ -> do
       Screen.printError "Bad command. Try again."
-      performGameTurn game
+      performGame game
 
 
 performUndoAction :: Game.Game -> IO ()
@@ -97,9 +97,9 @@ performUndoAction game =
   if Game.isInitial game
   then do
     Screen.printError "Can't undo game!"
-    performGameTurn game
+    performGame game
   else do
-    performGameTurn $ Game.undo game
+    performGame $ Game.undo game
 
 parseCommand :: String -> (String, [String])
 parseCommand userInput = let command:args = splitOn " " userInput
@@ -117,21 +117,21 @@ parsePosition pos = if length pos == 2
     safeDigitToInt r = if elem r ['1'..'8']
                        then Just $ digitToInt r
                        else Nothing
-  
+
 
 performMoveAction :: Game.Game -> Maybe Position -> Maybe Position -> IO ()
 performMoveAction game Nothing dst = do
   Screen.printError "Bad source position"
-  performGameTurn game
+  performGame game
 performMoveAction game src Nothing = do
   Screen.printError "Bad destiny position"
-  performGameTurn game
+  performGame game
 performMoveAction game (Just src) (Just dst) =
   case (Game.tryMovement game src dst) of
-    Just nextGame -> performGameTurn nextGame
+    Just nextGame -> performGame nextGame
     Nothing -> do
       Screen.printError "Illegal movement. Try again."
-      performGameTurn game
+      performGame game
 
 showAvailableMovements :: Game.Game -> Maybe Position -> String
 showAvailableMovements game Nothing         = "No movements"
