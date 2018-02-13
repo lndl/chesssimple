@@ -27,8 +27,7 @@
 \maketitle
 
 \begin{abstract}
-* TODO: Aca iria el abstract del trabajo práctico. Lo dejo para el final *
-\keywords{Ajedrez, IA, * TODO: más etiquetas para completar * }
+  Este trabajo muestra una implementación sencilla del juego de ajedrez, con una interfaz simple y compacta, reglas intuitivas y fácilmente extensibles y una inteligencia artificial sencilla y elegante.
 \end{abstract}
 %
 \section{Introducción}
@@ -46,7 +45,15 @@ Posteriormente, la idea es publicar el proyecto en un repositorio abierto (por e
 \subsection{Estructura del trabajo}
 \label{subsec:Estructura trabajo}
 
-*TODO: Comentar la estructura del trabajo. Lo dejo para el final ya que no lo tengo totalmente definido*
+A lo largo del trabajo se tratará de mostrar una una línea de afuera hacia adentro, es decir, desde el funcionamiento de la interfaz con el usuario, pasando por su implementación, hasta llegar a los confines de las reglas del juego y del desarrollo de la IA.
+
+Dicho eso, la primera sección explicará el funcionamiento detallado de la interfaz, desde el punto de vista de un usuario.
+
+En la segunda sección se mostrará el diseño y la implementación del sistema; primero por la estructura de todos los tipos definidos y, posteriormente, por el módula de la interfaz con el usuario, avanzando hacia los módulos del juego y del tablero. Luego se desarrollará la teoría y la implementación del motor de IA en detalle, y al final de la sección, una optimización por paralelización.
+
+La tercera sección planteará el desarrollo de algunos tests basados en propiedades.
+
+Y finalmente, en la cuarta sección se expondrán las conclusiones.
 
 \section{Presentación e interfaz de la aplicación}
 
@@ -572,7 +579,7 @@ Hacer el movimiento es obtener el mejor juego posible de las siguientes jugadas 
 
 \textit{computeNegamax} es de la siguiente forma:
 
-\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de computeNegamax]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de computeNegamax, label={lst:compute_negamax}]
 computeNegamax :: (ZeroSumGame zsg) =>
                   Integer -> zsg -> Int
 computeNegamax depth game =
@@ -625,7 +632,71 @@ Sin más, esto es la IA del juego.
 
 \subsubsection{ Paralelización }
 
-Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha estudiado implementar una sencilla paralelización en el algoritmo. Se ha observado que la función \textit{performMovement} del código \ref{lst:perform_movement}, computa una lista con el valor negamax de cada jugada inmediata. Como dichos cálculos son independientes entre sí, se ha contemplado realizar esa computación en paralelo con el propósito de obtener un mejor \textit{speedup}
+Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha estudiado implementar una sencilla paralelización en el algoritmo. Se ha observado que la función \textit{performMovement} del código \ref{lst:perform_movement}, computa una lista con el valor negamax de cada jugada inmediata. Como dichos cálculos son independientes entre sí, se ha contemplado realizar esa computación en paralelo con el propósito de obtener un mejor \textit{speedup}.
+
+La nueva versión de \textit{performMovement} se ve así:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición paralela de performMovement]
+performMovement :: (ZeroSumGame zsg) =>
+                   zsg -> Integer -> zsg
+performMovement game strength =
+  bestGame (allPossibleGames `using` parList rdeepseq)
+  where bestGame         =
+          fst.minimumBy
+            (\(_,score1) (_,score2) ->
+              compare score1 score2)
+        allPossibleGames =
+          [(aGame, computeNegamax strength aGame) |
+            aGame <- nextGames game]
+\end{lstlisting}
+
+En realidad, el único cambio significativo respecto a la vieja versión es el uso del paralelismo en la expresión \textit{(allPossibleGames `using` parList rdeepseq)}. Esta <<sintaxis>> proviene del paquete \textit{parallel} de Haskell y hace uso de estrategias de paralelización para separar la lógica real del programa del mecanismo o modelo de ejecución paralela.
+
+La paralelización en Haskell requiere entender algunos conceptos teóricos nuevos, no por el lenguaje en realidad, sino por la naturaleza de la evaluación \textit{lazy}. Básicamente, y sin entrar en grandes detalles, existen los conceptos de \textit{normal form} y de  \textit{weak head normal form}. El primero se aplica a aquellas expresiones que son completamente evaluadas o, dicho de otra manera, que son reducidas hasta la expresión más atómica posible. El segundo se aplica sobre expresiones en dónde únicamente se evalua hasta un <<paso>> o lo que dicte el contructor más externo. En general, Haskell funciona de esta última manera, lo cual es muy útil, como lo anteriormente visto de la función \textit{computeNegamax} en \ref{lst:compute_negamax}. Pero hay casos, como por ejemplo en la paralelización, en donde, por ejemplo, los elementos de una lista -como en este caso- deben ser completamente evaluados si se desea una obtener una mejora seria en los tiempos de ejecución; de los contrario, lo que se paraleliza es solamente el desarrollo del <<primer nivel>> de una expresión en \textit{weak head normal form}.
+
+Para forzar la evaluación completa de la expresión se usa la estrategia \textit{rdeepseq} que internamente usa la función \textit{seq} para realizar esta acción sobre todos los componentes internos del dato. Esto, no lo puede hacer automáticamente con todos los tipos de datos; para ello, se requiere que estos tipos sean instancias de la clase \textit{NFData} (afortunadamente, sí se puede derivar automáticamente sobre los tipos deseados). Con esto se indica que tal tipo puede evaluarse completamente. Lógicamente, aquellos tipos que detonen alguna clase de estructura infinita, por ejemplo, no podrán ser miembros de esta clase porque si no, jamás podrán ser evaluados completamente.
+
+Para concluir con este experimento, se dejarán algunas métricas empíricas. Obviamente no representan una prueba seria, pero puede arrojar una primera pista acerca de la efectividad de la parelalización:
+
+<<ACA los BENCHS>>
+
+\section{Tests}
+
+Los tests se realizaron con el framework QuickCheck, el cual permite definir y ejecutar tests basados en propiedades: en vez de escribir el test con los datos de entrada definidos por el usuario, se describen, por un lado, generadores para esos tipos de datos y, por otro lado, propiedades a validar. Luego, el propio framework probará con muchos datos aleatorios las propiedades descritas para determinar si se cumplen o no, -donde los datos siguen la estructura definida por los generadores-. Idealmente una propiedad puede considerarse verdadera si se valida para todos los elementos posibles de un dominio. Dado que pueden ser infinitas, las pruebas automatizadas testean con muchos elementos y así puede establecerse una tendencia acerca de la <<validez>> de la propiedad.
+
+Para el presente trabajo se arrancó la descripción de algunas propiedades para el módulo Board. Algunas de las funciones claves de este módulo fueron testeadas con propiedades. Por ejemplo, la siguiente propiedad:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Propiedad sobre los movimientos legales del rey]
+-- Must be impossible for a king to move
+to a position threatened by an enemy
+prop_legal_king_movement =
+  forAll validBoard $ \board ->
+    forAll (arbitrary :: Gen Color) $ \color ->
+      let kingPosition      =
+            head $ positionsOf board color King
+          theKingMovements  =
+            freeMovements board color kingPosition
+          possibleBoards    =
+            map (\possibleDst ->
+              placePiece board kingPosition possibleDst)
+                theKingMovements
+          safeMovement      =
+            \possibleBoard -> not $
+              isCheck possibleBoard color
+       in all safeMovement possibleBoards
+\end{lstlisting}
+
+Establece que <<para todo>> tablero válido y <<para todo>> turno posible, los posibles tableros resultantes de ubicar al rey del bando que debe jugar en alguno de los casilleros donde dicho rey puede moverse, tiene que ser todos seguros, es decir, no puede haber un movimiento posible para el rey en donde se deje a sí mismo en jaque.
+
+Actualmente hay implementadas cinco propiedades -todas <<válidas>>-, con lo que el porcentaje de cobertura de los tests es bastante pobre. Los que están, sirvieron para encontrar varios problemas conceptuales en la implementación de algunas funciones, y de alguna manera dejan constancia de que la implemntación actual no viola los invariantes planteados. Seguramente a futuro habrá que seguir pensando en diseñar más propiedades para probar.
+
+\section{Conclusiones}
+
+El desarrollo de este trabajo ha dejado puntos
+
+
+
+
 
 %
 % ---- Bibliography ----
@@ -639,8 +710,14 @@ Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha e
     How to write a Haskell program - \url{https://wiki.haskell.org/How\_to\_write\_a\_Haskell\_program}
   \bibitem[4]{ioinside}
     IO inside - \url{https://wiki.haskell.org/IO\_inside}
-  \bibitem[?]{lalalala}
-    * TODO - Faltan más *
+  \bibitem[5]{ia_modernaproach}
+    Stuart Russell, Peter Norvig - Artificial Intelligence, A modern approach
+  \bibitem[6]{chess_programming}
+    Chess Programming Wiki - \url{https://chessprogramming.wikispaces.com/}
+  \bibitem[7]{parallel}
+    Control.Parallel.Stretegies - \url{https://hackage.haskell.org/package/parallel-3.2.1.1/docs/Control-Parallel-Strategies.html}
+  \bibitem[7]{parallel_and_concurrent}
+    Simon Marlow - Parallel and Concurrent Programming in Haskell
 \end{thebibliography}
 
 \end{document}
