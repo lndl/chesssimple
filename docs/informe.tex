@@ -656,9 +656,21 @@ La paralelización en Haskell requiere entender algunos conceptos teóricos nuev
 
 Para forzar la evaluación completa de la expresión se usa la estrategia \textit{rdeepseq} que internamente usa la función \textit{seq} para realizar esta acción sobre todos los componentes internos del dato. Esto, no lo puede hacer automáticamente con todos los tipos de datos; para ello, se requiere que estos tipos sean instancias de la clase \textit{NFData} (afortunadamente, sí se puede derivar automáticamente sobre los tipos deseados). Con esto se indica que tal tipo puede evaluarse completamente. Lógicamente, aquellos tipos que detonen alguna clase de estructura infinita, por ejemplo, no podrán ser miembros de esta clase porque si no, jamás podrán ser evaluados completamente.
 
-Para concluir con este experimento, se dejarán algunas métricas empíricas. Obviamente no representan una prueba seria, pero puede arrojar una primera pista acerca de la efectividad de la parelalización:
+Para concluir con este experimento, se dejará una pequeña métrica empírica. Se ejecutó la solución secuencial y paralela probando con uno, dos y cuatro hilos, con una profundidad de búsqueda de cuatro. Obviamente no representan una prueba seria, pero puede arrojar una primera pista acerca de la efectividad de la parelalización:
+\\\
 
-<<ACA los BENCHS>>
+\setlength{\tabcolsep}{20pt}
+\begin{tabular}{ l | c | r }
+  Cantidad de hilos & Tiempo & Speedup \\
+  \hline
+  N = 1 (solución secuencial) & 51s & 1\\
+  N = 2 (solución paralela)   & 26s & 1.96\\
+  N = 4 (solución paralela)   & 17s & 3
+\end{tabular}
+\newline
+
+Se puede notar que el speedup tiene un decaimiento logarítmico a medida que se incrementa el número de hilos, lo cual es consistente debido a los costos extras de mantener muchos de ellos en el sistema.
+
 
 \section{Tests}
 
@@ -692,20 +704,20 @@ Actualmente hay implementadas cinco propiedades -todas <<válidas>>-, con lo que
 
 \section{Conclusiones}
 
-El desarrollo de este trabajo ha dejado puntos
+El desarrollo de este trabajo ha dejado un buen número de impresiones positivas y, algunas pocas, negativas. En principio, fue fructífero poder estudiar, analizar e implementar algunos de los conceptos de IA que son pilares en el desarrollo de un juego complejo como lo es el ajedrez. Muchos otros algoritmos y variantes quedaron fuera del estudio, pero podrían implementarse de forma independiente sin alterar ningún otro componente. En este sentido, la separación planteada entre la lógica propia del juego y el motor de IA a través del uso de clases de Haskell pareciera que dio buen resultado. Por otro lado, el estudio del lenguaje en sí y el desarrollo de esta aplicación fue un desafio interesante y si bien algunas cuestiones no quedaron bien resueltas, en particular, algunas reglas no quedaron bien definidas por haber sido demasiado simplista en la definición de los tipos, la experiencia resultó muy valiosa y seguramente servirá en un futuro desarrollo.
 
+En cuanto a lo didáctico, el trabajo resultó en lineas generales placentero. Un problema que se ha notado es que en la bibliografia y en los textos en general dedicados a explicar y desarrollar la IA lo hacen desde una perspectiva puramente operacional y resulta díficil entenderlo y <<traducirlo>> a un lenguaje más denotacional como el que sugiere Haskell. De hecho, una primera versión del motor de IA implementada para este trabajo se logro por medio de esta política y, posteriormente, en \cite{whyfunctional} y \cite{introfunctional} se muestran implementaciones de IA mucho más funcionales y elegantes, y se decidió cambiar el diseño del motor a algo del estilo planteado en la bibliografía.
 
-
-
+Como se ha mencionado en la introducción, la idea posterior es liberar el código fuente presente en este trabajo y, en lo posible, seguir desarrollandolo junto a la comunidad para seguir aprendiendo y aplicando conceptos sobre programación funcional.
 
 %
 % ---- Bibliography ----
 %
 \begin{thebibliography}{}
   \bibitem[1]{whyfunctional}
-  John Hughes - "Why functional programming matters"
+  John Hughes - Why functional programming matters
   \bibitem[2]{introfunctional}
-  Richard Bird, Philip Wadler - Introduction to Functional Programming"
+  Richard Bird, Philip Wadler - Introduction to Functional Programming
   \bibitem[3]{howtowritehaskellprogram}
     How to write a Haskell program - \url{https://wiki.haskell.org/How\_to\_write\_a\_Haskell\_program}
   \bibitem[4]{ioinside}
@@ -715,8 +727,8 @@ El desarrollo de este trabajo ha dejado puntos
   \bibitem[6]{chess_programming}
     Chess Programming Wiki - \url{https://chessprogramming.wikispaces.com/}
   \bibitem[7]{parallel}
-    Control.Parallel.Stretegies - \url{https://hackage.haskell.org/package/parallel-3.2.1.1/docs/Control-Parallel-Strategies.html}
-  \bibitem[7]{parallel_and_concurrent}
+    Parallel - \url{https://hackage.haskell.org/package/parallel-3.2.1.1/docs/Control-Parallel-Strategies.html}
+  \bibitem[8]{parallel_and_concurrent}
     Simon Marlow - Parallel and Concurrent Programming in Haskell
 \end{thebibliography}
 
