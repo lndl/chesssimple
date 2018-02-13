@@ -488,7 +488,7 @@ Esta última característica es fundamental para esbozar el algoritmo que es el 
 
 Para describir este algoritmo, primero hace falta construir un \textbf{árbol de jugadas} (en la bibliografía también aparece como \textbf{árbol de búsqueda}). La idea es que a partir de un juego -o de su entorno actual, como por ejemplo, el presente tablero- se puedan calcular todas las posibles jugadas -cada una de ellas representadas por un nodo- que un jugador podría representar y, para cada una de ellas, calcular todas las jugadas posibles que el adversario podría realizar. Este procedimiento debería terminar cuando se llega una situación terminal, en la cual, el juego termina.
 
-Adicionalemente se requiere una \textbf{función de evaluación}. La idea de esta función es otorgarle un puntaje al nodo presente -o jugada calculada- de manera tal que un número positivo implique que la posición es favorable para un jugador A y, en cambio, un número negativo implique que la posición es desfavorable para el mismo jugador. Lógicamente, considerando que se trata de un juego de suma cero, si un número positivo es favorable para A, entonces será proporcionalmente desfavorable para un jugador B y, un número negativo, será favorable para B.
+Adicionalemente se requiere una \textbf{función de evaluación}. La idea de esta función heurística es otorgarle un puntaje al nodo presente -o jugada calculada- de manera tal que un número positivo implique que la posición es favorable para un jugador A y, en cambio, un número negativo implique que la posición es desfavorable para el mismo jugador. Lógicamente, considerando que se trata de un juego de suma cero, si un número positivo es favorable para A, entonces será proporcionalmente desfavorable para un jugador B y, un número negativo, será favorable para B.
 
 La idea básica de este algoritmo es que si ambos jugadores realizan sus mejores jugadas -bajo los criterios de la función de evaluación- la evaluación minimax sobre una determinada jugada sera aquella que represente la mínima pérdida sobre las mejores jugadas del contrincante siguiendo exáctamente el mismo razonamiento (de ahí el nombre \textit{minimax}).
 
@@ -501,8 +501,131 @@ Por supuesto que en la práctica esto -al menos para el ajedrez- es imposible ya
 
 Hay jugadas que rápidamente pueden ser descartadas. Intuitivamente, es el caso de jugadas que conducen a posiciones muy malas para un jugador tal que seguir desarrollando las consecuencias de tales jugados redunda en una perdida de tiempo porque ya queda en evidencia que la continuación de la jugada seguirá por otra rama. Esta es la idea que se pretende capturar con la poda alfa-beta: es una técnica de optimización que, como tal, consigue el mismo resultado que el algoritmo minimax estándar pero con muchos menos cálculos.
 
-En $\alpha$ se mantiene el mejor valor para el jugador que se pretende maximizar y en $\beta$ se mantiene el mejor valor para el jugador que se pretende minimizar
+En $\alpha$ se mantiene el mejor valor para el jugador que se pretende maximizar y en $\beta$ se mantiene el mejor valor para el jugador que se pretende minimizar. Con lo cual, si uno de los nodos que se están calculando escapan de las cotas establecidas por $\alpha$ o $\beta$, la búsqueda podría ser abandonada porque ya existen valores mejores que los que se están buscando. Esto es lo que se denominda <<poda>>
 
+Para aclarar un poco el panorama, a continuación se mostrará un ejemplo:
+
+\begin{figure}
+\begin{verbatim}
+                                    [max]
+                                   /     \
+                                  /       \
+                                [min]     [min]
+                               /  \        / \
+                              /    \      /   \
+                             1      2    0     ?
+\end{verbatim}
+\caption{Ejemplo de árbol minimax con poda $\alpha\beta$}
+\label{fig:ascii-box}
+\end{figure}
+
+En este ejemplo, se puede ver cómo el valor minimax del subarbol izquierdo es 1. Dado que la búsqueda es de tipo DFS, en ese momento exacto el valor de la raíz \textit{max}, así como el valor $\alpha$ es 1. Esto quiere decir que el mejor valor hasta ahora para el jugador que maximiza es 1. Siguiendo con el mismo criterio de búsqueda, se evalua que el primer hijo del subarbol derecho tiene un valor minimax 0 (el valor $\beta$ de dicho subarbol será también 0 en ese momento). Lo destacable ahora es que el subarbol \textit{min} tendrá un valor minimax $x \leq 0$. Por lo tanto, ya no tiene sentido seguir explorando el resto de los hijos de dicho subarbol porque el nodo \textit{max} seguro tendrá un valor $y \geq 0$, y eso se detecta comparando los valores actuales contra la cota de $\alpha$ -para el caso de los minimizadores- o contra la cota de $\beta$ -para el caso de los maximizadores-.
+
+\subsubsection{ Implementación }
+
+Para el presente trabajo se intentó abstraer y encapsular los conceptos básicos sobre un juego de suma cero -en particular, esta implementación del ajedrez- separando totalmente esas ideas de las reglas del juego. En efecto, se podría exportar lo desarrollado sobre IA aquí a otro juego de tipo suma cero, y tendría la misma validez que tiene aquí.
+
+Para llevar a cabo dicha separación, se decidió explorar un poco lo que ofrece Haskell sobre las clases. Se modeló la clase \textit{ZeroSumGame} que cuenta con la siguiente firma:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de la clase ZeroSumGame, label={lst:zero_sum_game_def}]
+class ZeroSumGame zsg where
+  nextGames     :: zsg -> [zsg]
+  evaluateGame  :: zsg -> Int
+\end{lstlisting}
+
+Lo que se pretendió capturar con esta definición fue la teoría expuesta anteriormente: por un lado, la generación de todas las posibles jugadas para construir el árbol de búsqueda (sólo la generación, el árbol es parte de la lógica de IA) y, por otro lado, la función de evaluación para el juego. Estas dos funciones son las que se dejan como <<punto de enganche>> para que cualquier implementación de cualquier juego de suma cero las defina y obtenga, a cambio, una función \textit{performMovement} que intentará realizar el mejor movimiento posible, según la teoria ya vista. Esta función, \textit{performMovement} es la realiza el movimiento para jugadores de CPU, y puede verse presente en el código de \ref{lst:perform_game_turn}
+
+Antes de pasar a ver los detalles de la implementación de \textit{performMovement}, a modo de documentación se deja la definición de \textit{Game} como instancia de \textit{ZeroSumGame}:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de Game como instancia de ZeroSumGame, label={lst:zero_sum_game_instance}]
+instance GameAI.ZeroSumGame Game where
+  evaluateGame game =
+    BoardAI.evaluateBoard (currentBoard game) (turn game)
+  nextGames game =
+    let allPossibilities =
+          Board.possibleMovementsForeachTeamPosition
+            (currentBoard game) (turn game)
+     in catMaybes $
+          concatMap (\(src, dsts) ->
+            map (\dst -> tryMovement game src dst) dsts)
+              allPossibilities
+\end{lstlisting}
+
+Como se puede ver, en el módulo \textit{BoardAI} se encuentra la función que realiza la evaluación del estado actual del juego, y del él, obtiene un puntaje. Los detalles internos de dicha función son propios del juego y se pueden estudiar y analizar en la bibliografía. \textit{nextGames} calcula todos los juegos inmediatos posibles que se pueden obtener a partir del juego actual. \textit{catMaybes} es necesaria para <<extraer>> o ignorar los valores contenidos en la mónada Maybe de la función \textit{tryMovement}.
+
+Ahora sí, la definición de \textit{performMovement} es:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de performMovement, label={lst:perform_movement}]
+performMovement :: (ZeroSumGame zsg) =>
+                   zsg -> Integer -> zsg
+performMovement game strength =
+  bestGame $
+    [(possibleGame, computeNegamax strength possibleGame) |
+      possibleGame <- nextGames game]
+  where bestGame =
+    fst.minimumBy
+      (\(_,score1) (_,score2) -> compare score1 score2)
+\end{lstlisting}
+
+Hacer el movimiento es obtener el mejor juego posible de las siguientes jugadas inmediatas \textit{nextGames} donde el mejor juego será el que posea el menor valor \textit{negamax} asociado. \textit{Negamax} es una implementación más concisa de \textit{minimax} que funciona con una función de evaluación relativa. Esto significa que la positividad o la negatividad del valor entero dependerá del jugador a quien le toque mover en el correspondiente juego, es decir, un valor positivo dirá siempre que la posición será favorable a quien le corresponda mover y un valor negativo, lo contrario. Dado que los siguientes juegos se evaluan en función del adversario -porque el turno le correspondería a él-, el menor de esos valores será el que más lo afectará y, por tanto, el mejor movimiento para el bando que está justamente realizando dicho cálculo.
+
+\textit{computeNegamax} es de la siguiente forma:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de computeNegamax]
+computeNegamax :: (ZeroSumGame zsg) =>
+                  Integer -> zsg -> Int
+computeNegamax depth game =
+  negamax $ fmap evaluateGame $ (choptree depth) $
+    gametree game
+\end{lstlisting}
+
+Dado un juego, computa su árbol de jugadas, lo recorta a la profundidad deseada (como ya se ha dicho, esto puede verse como la dificultad del CPU), luego aplica un \textit{map} de \textit{evaluateGame} sobre dicho árbol y finalmente lo reduce a su valor negamax correspondiente. Lo notable de esta implementación es que \textit{gametree game} podría ser un árbol inmensamente extenso (y hasta incluso, infinito). Y aun con el recorte propuesto con \textit{choptree depth} el árbol podría ser, de cualquier manera, muy grande. Aquí, gracias al \textit{lazy-evaluation} que posee Haskell, ninguna de las expresiones dispuestas se calcula hasta que realmente sean necesarias de computarse, y eso recién sucederá en la función \textit{negamax}:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definiciones de negamax]
+negamax :: (Tree Int) -> Int
+negamax = maximum.negamax'
+
+negamax' :: (Tree Int) -> [Int]
+negamax' (Node x []) = [x]
+negamax' (Node _ lt) =
+  fmap negate $ mapmax (fmap negamax' lt)
+\end{lstlisting}
+
+Claramente se ve cómo en los nodos hoja se computa recién toda la cadena de computaciones vistas en el párrafo previo y  en los nodos intermedios se ignora completamente (notar el \_)
+
+En los nodos hoja se realiza la evaluación heurística del escenario actual del juego. En los intermedios, siguiendo la estructura del árbol, se aplica recursivamente la función sobre las ramas hijas. \textit{(fmap negamax' lt)} es de tipo \textit{[[Int]]}, y dado un nivel $k$, representa parcialmente el cálculo de \textit{negamax} para el nivel $k+1$. Dado que el cálculo es en DFS (primero en profundidad, de izquierda a derecha) existe cierta probabilidad creciente de que a medida que se obtengan los valores negamax de la izquierda, algunas de las ramas de la derecha ya no requieran computarse y, por tanto, puedan descartarse, según el criterio de la poda $\alpha\beta$. \textit{mapmax} intentá expresar dicha intención de la siguiente manera:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de mapmax]
+mapmax :: [[Int]] -> [Int]
+mapmax []       = []
+mapmax (xs:xss) = let max = maximum xs
+                   in max:(prune max xss)
+\end{lstlisting}
+
+De cada subarbol del nival $k+1$ se va obteniendo el mejor valor y se pasa dicho valor como cota de poda para los siguientes subarboles a calcular. La poda será:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Definición de prune]
+prune :: Int -> [[Int]] -> [Int]
+prune bound [] = []
+prune bound (xs:xss)
+  | isOutsideBound xs bound = prune bound xss
+  | otherwise               = mapmax (xs:xss)
+
+isOutsideBound :: [Int] -> Int -> Bool
+isOutsideBound [] _         = False
+isOutsideBound (x:xs) bound =
+  if bound <= x then True
+                else isOutsideBound xs bound
+\end{lstlisting}
+
+En \textit{prune} se puede ver que si dentro de xs -que representaría los valores negamax de un subarbol en el nivel $k+1$- algún valor se encuentra fuera de la cota, entonces la exploración de dicho subarbol puede abandonarse puesto que ningún otro valor en él podrá mejorar lo previamente hallado en otro subarbol, determinado por dicha cota.
+
+Sin más, esto es la IA del juego.
+
+\subsubsection{ Paralelización }
+
+Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha estudiado implementar una sencilla paralelización en el algoritmo. Se ha observado que la función \textit{performMovement} del código \ref{lst:perform_movement}, computa una lista con el valor negamax de cada jugada inmediata. Como dichos cálculos son independientes entre sí, se ha contemplado realizar esa computación en paralelo con el propósito de obtener un mejor \textit{speedup}
 
 %
 % ---- Bibliography ----
