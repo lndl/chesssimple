@@ -187,7 +187,7 @@ Como se anticipó en la introducción del presente informe, la idea fue pensar y
 
 El módulo del juego es, valga la redundancia, \textit{Game}. La forma de su tipo es:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Game, label={lst:tipo_game}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Tipo de Game, label={lst:tipo_game}]
 data Game = Game { player1 :: Player.Player
                  , player2 :: Player.Player
                  , plays   :: [Board.Board]
@@ -199,7 +199,7 @@ Tal como se observa, es un registro (o \textit{product type}) que encapsula una 
 
 Los jugadores (\textit{Player}) son de la siguiente forma:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Player, label={lst:tipo_player}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Tipo de Player, label={lst:tipo_player}]
 data Player =
   HumanPlayer    { name     :: String,  color :: Color } |
   ComputerPlayer { strength :: Integer, color :: Color }
@@ -210,7 +210,7 @@ El jugador es una unión (o \textit{sum type}) de registros en donde la idea es 
 
 El último tipo relevante es el tablero (\textit{Board}) que, en realidad, va a contener otros tipos internos, a saber:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Tipo de Board y derivados, label={lst:tipo_board}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Tipo de Board y derivados, label={lst:tipo_board}]
 type Board         = Matrix Square
 data Square        = BlankSquare |
                        OccupiedSquare ColouredPiece
@@ -223,13 +223,13 @@ type Position      = (Int, Int)
 
 El tablero es una matriz de casilleros o escaques (\textit{Square}), en donde cada uno de ellos, o bien, está vacío (\textit{BlankSquare}), o bien, está ocupado por una pieza de color, esta última representada por una tupla cuyo primer componente es el color al bando al que pertenece (\textit{Color}) y cuyo segundo componente es la pieza en sí (\textit{Piece}). La posición es simplemente una coordenada de números para ubicar casilleros en el tablero.
 
-\subsection{Modulo principal (\textit{Main.hs})}
+\subsection{Módulo principal (\textit{Main.hs})}
 
 A continuación se arrancará con el módulo de inicio de la aplicación. Como ya se ha mencionado, este componente se encarga de presentar una interfaz de interacción hacia el usuario, y para ello, se hace uso exhaustivo de la entrada/salida de la consola; consecuentamente -desde Haskell- se utiliza la mónada IO.
 
 El punto de entrada \textit{main} es el siguiente:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Punto de entrada de la aplicación, label={lst:punto_entrada}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Punto de entrada de la aplicación, label={lst:punto_entrada}]
 main :: IO ()
 main = do
   arguments <- cmdArgs (modes [humanvshuman,
@@ -251,7 +251,7 @@ También se pueden ver en el medio algunas funciones accesorias como \textit{Scr
 
 El flujo de ejecución sigue con \textit{performGame}:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Función performGame, label={lst:perform_game}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función performGame, label={lst:perform_game}]
 performGame :: Game.Game -> IO ()
 performGame game = do
   printGameLayout game
@@ -266,7 +266,7 @@ Nuevamente se trabaja con la IO para imprimir el tablero en \textit{printGameLay
 
 Luego comprueba si el juego está en situación de «jaque mate», en cuyo caso, termina la partida, y si no, pasa a evaluar la función \textit{performGameTurn}:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Función performGameTurn, label={lst:perform_game_turn}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función performGameTurn, label={lst:perform_game_turn}]
 performGameTurn :: Game.Game -> Player.Player -> IO ()
 performGameTurn game (Player.ComputerPlayer strength _) =
   let updatedGame = GameAI.performMovement game strength
@@ -295,7 +295,7 @@ Esta función hace uso del \textit{pattern matching} para discernir qué tipo de
 
 Para concluir con este apartado, se mostrará a continuación la acción correspondiente al comando más relevante, \textit{move}:
 
-\begin{lstlisting}[frame=single, language=haskell, caption=Función performMoveAction asociada al comando move, label={lst:perform_move_action}]
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función performMoveAction asociada al comando move, label={lst:perform_move_action}]
 performMoveAction :: Game.Game -> Maybe Position ->
                        Maybe Position -> IO ()
 performMoveAction game Nothing dst = do
@@ -315,6 +315,194 @@ performMoveAction game (Just src) (Just dst) =
 Esta acción sólo se comunicará con el módulo principal del juego -\textit{Game}- en caso de tener validadas sintácticamente las posiciones de origen y de destino para mover una pieza. En cualquier otro caso se informará la condición del error.
 
 En caso de éxito se repetirá la ejecución de \textit{performGameTurn} con el estado del juego actualizado. En los casos de error se volverá a pedir un nuevo comando al usuario con exactamente el mismo juego. En cualquiera de los casos se puede ver que hay conformado un ciclo de acciones que solamente finaliza cuando se detecta que el juego ha terminado.
+
+
+\subsection{Módulos de lógica y reglas del juego}
+
+En esta sección se comenzará a explicar los aspectos más relevantes de la lógica del juego.
+
+Siguiendo con la perspectiva \textit{top-down}, se arrancará por el módulo \textit{Game}. Las funciones que se exportan son las siguientes: \textit{new, isInitial, isCheck, isCheckMate, tryMovement, currentBoard, whoPlaysNow, update, turn, show, availableMovements, undo, player1, player2}. Muchas de estas funciones son observadoras, es decir, permiten consultar el estado actual del juego (¿quién juega en este turno?, ¿hay jaque?, ¿hay jaque mate?, ¿qué movimientos posibles existen en determinada posición?), y otras, en cambio, son funciones que alteran de alguna manera el estado presente del juego actual y devuelven una nueva instancia del juego, tal como el caso de \textit{update} o de \textit{tryMovement}. Esta última es una de las más relevantes porque es la que acciona un turno en una partida y es la primera entrada a la lógica del juego, tal como se puede dilucidar del código expuesto en \ref{lst:perform_move_action}. A continuación, se mostrará el cuerpo de dicha función:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función tryMovement, label={lst:try_movement}]
+tryMovement :: Game -> Board.Position ->
+               Board.Position -> Maybe Game
+tryMovement game src dst =
+  case Board.movePiece
+    (currentBoard game) (turn game) src dst of
+      Just newBoard -> Just (update game newBoard)
+      Nothing       -> Nothing
+\end{lstlisting}
+
+Dada una partida, una posición de origen y una posición de destino, la función intentará realizar el movimiento delegando todas las validaciones pertinentes a la función \textit{Board.movePiece}, con la información actual del juego, es decir, el tablero y el turno actual. El resultado final es de tipo \textit{Maybe Game} dado que el movimiento podría no ser válido.
+
+Probablemente el módulo más importante del juego sea \textit{Board}: en él se encuentra codificada la mayor parte del funcionamiento del juego. Una vez más, se comenzará la exploración por la última función que se ha visto, \textit{Board.movePiece}
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función movePiece, label={lst:move_piece}]
+movePiece :: Board -> Color -> Position ->
+             Position -> Maybe Board
+movePiece board turn src dst =
+  let availableMovements = freeMovements board turn src
+   in if dst `elem` availableMovements
+      then Just $
+        treatPromotions $ placePiece board src dst
+      else Nothing
+\end{lstlisting}
+
+Esta función trabaja con un tablero, un color que representaría el turno del bando al cual le corresponde jugar, una posición de origen y una posición de destino. La manera de trabajar de esta función es calculando los movimientos libres que se disponen desde la posición origen del tablero y si la posición destino se encuentra entre tales movimientos se procederá a realizar el movimiento en \textit{placePiece} -esta función simplemente reubicará la pieza escogida en la posición de destino en la matriz-. También se puede ver la función \textit{treatPromotions} la cual detecta si un peón llegó a la fila del enemigo, en cuyo caso, se transformará en una dama; si no se da tal caso, se dejará el tablero intacto.
+
+Cuando la posición de destina no se encuentra entre los movimientos disponibles desde la posición de origen, el tablero no se actualizará con el movimiento pretendido y la función se evaluará en Nothing, es decir, no se corresponderá un tablero válido para el movimiento pretendido. Las razones de por que el movimiento es inválido se comenzará a fundamentar en la definición de la siguiente función, \textit{freeMovements}:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función freeMovements, label={lst:free_movements}]
+-- in this function there is control
+-- if the kings position is in check or not.
+freeMovements :: Board -> Color -> Position -> [Position]
+freeMovements board turn position =
+  filter (\possibleDst -> not $
+   isCheck (placePiece board position possibleDst) turn) $
+      uncheckedFreeMovements board turn position
+\end{lstlisting}
+
+Esta función, en realidad, delega gran parte de la lógica de validación del movimiento a otra función llamada \textit{uncheckedFreeMovements}. La razón de esto es que la presente función necesita saber si los movimientos posibles a través de la posición de origen provocan un jaque sobre el rey propio. De ser así, el movimiento no podría realizarse y, como consecuencia, debe descartarse.
+
+Tras conocer dicha restricción, ahora se mostrará la función \textit{uncheckedFreeMovements}:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función uncheckedFreeMovements, label={lst:unchecked_free_movements}]
+-- 'unchecked' means that there is no control
+-- if the kings position is in check or not.
+uncheckedFreeMovements :: Board -> Color ->
+                          Position -> [Position]
+uncheckedFreeMovements board turn position
+  | not (legalGrab board turn position) = []
+  | isKnightOccupied board position     =
+      knightFreeMovements  board turn position
+  | isPawnOccupied board position       =
+      pawnFreeMovements    board turn position
+  | otherwise                           =
+      generalFreeMovements board turn position
+\end{lstlisting}
+
+De aquí lo que se controla, en primer lugar, es si la posición de origen es <<legal>>, es decir, si tal posición del tablero está ocupada por una pieza del bando que tiene que mover en dicho turno; en contraposición, el inicio del movimiento será ilegal si la posición está fuera del tablero, si corresponde a un casillero desocupado o si corresponde a un casillero ocupado por una pieza enemiga.
+
+Luego, se considera que el caballo y el peón tienen movimientos especiales por sobre el resto de las piezas (el caballo es la única pieza que puede <<saltear>> piezas, y el peón captura de una forma distinta a la cual se mueve); por tal razón, se tratan sus movimientos en funciones diferenciadas. En cualquier otro caso, se emplea la función \textit{generalFreeMovements}:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función generalFreeMovements, label={lst:general_free_movements}]
+generalFreeMovements :: Board -> Color ->
+                        Position -> [Position]
+generalFreeMovements board turn position =
+  concatMap (availabilityPositionFilter board turn)
+    (allMovements colouredPiece position)
+  where
+    selectedSquare = square board position
+    colouredPiece  = piece selectedSquare
+\end{lstlisting}
+
+Su funcionamiento se divide en dos partes: por un lado se tiene la generación del movimiento a partir del tipo de pieza seleccionada (\textit{allMovements}) ; y por otro lado se tiene la puesta de la pieza en el contexto del tablero, a través de la función \textit{availabilityPositionFilter}. La presentación de esta última deberá demorarse unos parrafos puesto que será necesario explicar otras funciones previamente. En cambio, se comenzará a desarrollar la última de las funciones, es decir, \textit{allMovements}:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función allMovements, label={lst:all_movements}]
+allMovements :: ColouredPiece -> Position -> [[Position]]
+allMovements colouredPiece position =
+  map (filter isInsideBoard) $
+    pieceUnboundedMovements colouredPiece position
+\end{lstlisting}
+
+Lo que simplemente hace es recortar el movimiento de las piezas según los límites del tablero. En un primer momento se pensó en hacer que \textit{pieceUnboundedMovements} fuera una función infinita de manera tal que la dimensión del tablero no dependiera del movimiento de las piezas, pero dicho objetivo se abandonó rápidamente, en favor de cumplir con el alcance del trabajo. De cualquier manera la implementación está abierta a realizar dicho cambio o mejora y ninguna otra parte del código debería verse afectada, excepto por \textit{isInsideBoard}.
+
+Antes de volver con el desarrollo de \textit{generalFreeMovements}, se mostrarán las funciones \textit{pieceUnboundedMovements} y \textit{towerMovements} con el propósito de ir cerrando la exploración del módulo:
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función pieceUnboundedMovements, label={lst:piece_unbounded_movements}]
+pieceUnboundedMovements :: ColouredPiece -> Position ->
+                           [[Position]]
+pieceUnboundedMovements (CP (Black, Pawn)) =
+  blackPawnMovements
+pieceUnboundedMovements (CP (White, Pawn)) =
+  whitePawnMovements
+pieceUnboundedMovements (CP (_, Tower))    =
+  towerMovements
+pieceUnboundedMovements (CP (_, Knight))   =
+  knightMovements
+pieceUnboundedMovements (CP (_, Bishop))   =
+  bishopMovements
+pieceUnboundedMovements (CP (_, Queen))    =
+  queenMovements
+pieceUnboundedMovements (CP (_, King))     =
+  kingMovements
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función towerMovements, label={lst:tower_movements}]
+towerMovements :: Position -> [[Position]]
+towerMovements (i,j) =
+  let up    = [ (x, y) | x <- reverse [1..i-1], y <- [j] ]
+      down  = [ (x, y) | x <- [i+1..8], y <- [j] ]
+      left  = [ (x, y) | x <- [i], y <- reverse [1..j-1] ]
+      right = [ (x, y) | x <- [i], y <- [j+1..8] ]
+   in [ up, down, left, right ]
+\end{lstlisting}
+
+Un detalle importante a notar es que todas estas funciones tienen tienen tipo \textbf{[[Position]]}. Esto es porque hay una división implícita entre las direcciones de movimientos de una pieza -para el caso de la torre sería arriba, abajo, izquierda, derecha- y los movimientos en sí que puede realizar en cada una de esas direcciones. Este segundo nivel podría verse como función monótona, y es importante recalcarlo porque es una precondición necesaria para la primera parte de la función \textit{generalFreeMovements}, representada por la función \textit{availabilityPositionFilter} que, ahora sí, podrá desarrollarse:
+
+
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función availabilityPositionFilter, label={lst:availability_position_filter}]
+availabilityPositionFilter :: Board -> Color ->
+                              [Position] -> [Position]
+availabilityPositionFilter board turn positions =
+  let (frees, occupied) =
+         span (isSquareFree board) positions
+   in if (not . null) occupied &&
+        isPositionOccupiedByEnemy board turn
+          (head occupied)
+      then (head occupied):frees
+      else frees
+\end{lstlisting}
+
+El funcionamiento de este <<filtro>> es el siguiente: dada una lista de posiciones, la cual representa un vector de movimiento de una pieza -con la precondición de que sea monotónicamente creciente o decreciente sobre la extensión del tablero, como ya se ha mencionado- lo que se hace es calcular una bi-partición cuya frontera estará dada por la ocupación de un casillero por una pieza (esto se realiza con la función \textit{span}).  Tras esto se tendrán los casilleros desocupados a los cuales la pieza de partida podrá ubicarse. Debería quedar claro en este punto la importancia de la propiedad monotónica de la lista; de lo contrario, no podría garantizarse que esas posiciones libres están realmente antes de la primera posición detectada como <<ocupado>> (en tal sentido, \textit{span} es una función similar a \textit{takeWhile}).
+Adicionalemente, si el primer casillero ocupado se encuentra habitado por una pieza enemiga, dicha posición se agregará también al listado de posiciones disponibles puesto que es capturable.
+
+Con esto se considera concluida la explicación de, al menos, la columna vertebral de la lógica del juego que corresponde principalmente al movimiento de las piezas en el tablero respetando las reglas básicas del ajedrez.
+
+
+\subsection{Módulos de IA}
+
+Una parte importante de este trabajo se encuentra materializada en los módulos de IA que permiten que el CPU <<juegue>> con las reglas del ajedrez. Antes de desarrollar los detalles de la implementación, se necesitarán algunos conceptos teóricos sobre los algoritmos de IA utilizados.
+
+\subsubsection{ Teoría / Background }
+
+El ajedrez, como juego, presenta dos características importantes:
+
+\begin{enumerate}
+  \item Es un juego de \textit{información perfecta}.
+  \item Es un juego de \textit{suma cero}.
+\end{enumerate}
+
+Un juego de información perfecta es aquel en el cual toda la información necesaria para tomar una decisión -mover una pieza, por ejemplo- se encuentra de alguna manera visible en el entorno del juego -para el caso del ajedrez, el entorno sería el tablero-. La importancia de destacar esto es que no existen elementos libres al azar a la hora de evaluar el contexto del juego, y en consecuencia directa de esto, la IA no tendrá lógica que dependa de la aleatoriedad.
+
+Un juego de suma cero es aquel en donde el impacto de una decisión afectará en proporcionalidad inversa sobre el o los adversarios, con lo cual, la suma del efecto de cada decisión sobre cada jugador es siempre cero. Por ejemplo, en el caso del ajedrez, si un jugador A realiza un movimiento que lo deja en un contexto favorable, necesariamente dejará en un contexto desfavorable, y con la misma intensidad, a un jugador B. En contrarrecíproca, no pueden existir jugadas o decisiones que sean favorables o desfavorables para ambos jugadores al mismo tiempo.
+
+Esta última característica es fundamental para esbozar el algoritmo que es el núcleo de la IA desarrollada en este trabajo, que es el algoritmo \textit{minimax}
+
+\subsubsection{ Algoritmo Minimax }
+
+Para describir este algoritmo, primero hace falta construir un \textbf{árbol de jugadas} (en la bibliografía también aparece como \textbf{árbol de búsqueda}). La idea es que a partir de un juego -o de su entorno actual, como por ejemplo, el presente tablero- se puedan calcular todas las posibles jugadas -cada una de ellas representadas por un nodo- que un jugador podría representar y, para cada una de ellas, calcular todas las jugadas posibles que el adversario podría realizar. Este procedimiento debería terminar cuando se llega una situación terminal, en la cual, el juego termina.
+
+Adicionalemente se requiere una \textbf{función de evaluación}. La idea de esta función es otorgarle un puntaje al nodo presente -o jugada calculada- de manera tal que un número positivo implique que la posición es favorable para un jugador A y, en cambio, un número negativo implique que la posición es desfavorable para el mismo jugador. Lógicamente, considerando que se trata de un juego de suma cero, si un número positivo es favorable para A, entonces será proporcionalmente desfavorable para un jugador B y, un número negativo, será favorable para B.
+
+La idea básica de este algoritmo es que si ambos jugadores realizan sus mejores jugadas -bajo los criterios de la función de evaluación- la evaluación minimax sobre una determinada jugada sera aquella que represente la mínima pérdida sobre las mejores jugadas del contrincante siguiendo exáctamente el mismo razonamiento (de ahí el nombre \textit{minimax}).
+
+Idealmente, la función de evaluación se aplicaría sobre un nodo terminal, con lo cual, lo que importarían son tres valores: +1 para la victoria, 0 para el empate y -1 para la derrota. Dado cualquier nivel \textit{n} en el juego -nuevamente, en condiciones ideales no importaría cual- un valor minimax positivo implicaría que tras una serie de movimientos perfectos tanto por el jugador a mover/decidir como el contrincante conducirían irremediablemente a la victoria del primero, por los supuestos que impone minimax.
+
+Por supuesto que en la práctica esto -al menos para el ajedrez- es imposible ya que se estima que la cantidad de jugadas posibles en dicho juego es de $10^{40}$ (10 representaría el factor de ramificación, es decir, la cantidad promedio de jugadas posibles y 40 la profundidad o la duración de la partida en turnos) y en la actualidad no hay forma de computar semejante cantidad de partidas. Por lo tanto, lo que se suele realizar es recortar el árbol de búsqueda en un determinado nivel \textit{n} -y este valor \textit{n} será denominado la profundidad de búsqueda del contrincante de CPU y, más coloquialmente, su dificultad- y emplear la función de evaluación en los nodos terminales del último nivel, la cual deberá ser bastante más compleja porque en muy pocos casos se tratarán de nodos en donde el juego se considere terminado.
+
+
+\subsubsection{ Poda alfa-beta }
+
+Hay jugadas que rápidamente pueden ser descartadas. Intuitivamente, es el caso de jugadas que conducen a posiciones muy malas para un jugador tal que seguir desarrollando las consecuencias de tales jugados redunda en una perdida de tiempo porque ya queda en evidencia que la continuación de la jugada seguirá por otra rama. Esta es la idea que se pretende capturar con la poda alfa-beta: es una técnica de optimización que, como tal, consigue el mismo resultado que el algoritmo minimax estándar pero con muchos menos cálculos.
+
+En $\alpha$ se mantiene el mejor valor para el jugador que se pretende maximizar y en $\beta$ se mantiene el mejor valor para el jugador que se pretende minimizar
+
 
 %
 % ---- Bibliography ----
