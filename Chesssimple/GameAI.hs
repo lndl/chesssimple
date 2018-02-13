@@ -1,4 +1,4 @@
-module Chesssimple.GameAI ( ZeroSumGame, evaluateGame, nextGames, isGameOver, performMovement ) where
+module Chesssimple.GameAI ( ZeroSumGame, evaluateGame, nextGames, performMovement ) where
 
 import Data.List (minimumBy, maximumBy, sortBy)
 import Data.Ord  (compare)
@@ -9,14 +9,13 @@ class ZeroSumGame zsg where
  -- ie: a positive number is a game favourable to the player that currently needs to move.
   evaluateGame  :: zsg -> Int
   nextGames     :: zsg -> [zsg]
-  isGameOver    :: zsg -> Bool
 
 performMovement :: (ZeroSumGame zsg) => zsg -> Integer -> zsg
 performMovement game strength = bestGame $ [(possibleGame, computeNegamax strength possibleGame) | possibleGame <- nextGames game]
   where bestGame = fst.minimumBy (\(_,score1) (_,score2) -> compare score1 score2)
 
 computeNegamax :: (ZeroSumGame zsg) => Integer -> zsg -> Int
-computeNegamax depth = negamax.fmap evaluateGame.(choptree depth).gametree
+computeNegamax depth game = negamax $ fmap evaluateGame $ (choptree depth) $ gametree game
 
 negamax :: (Tree Int) -> Int
 negamax = maximum.negamax'

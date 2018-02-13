@@ -21,7 +21,6 @@ instance Show Game where
   show Game {player1=_, player2=_, plays=plays} = show $ head plays
 
 instance GameAI.ZeroSumGame Game where
-  isGameOver        = isCheckMate
   evaluateGame game = BoardAI.evaluateBoard (currentBoard game) (turn game)
   nextGames game =
     let allPossibilities = Board.possibleMovementsForeachTeamPosition (currentBoard game) (turn game)
