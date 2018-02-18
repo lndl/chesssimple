@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+
 module Chesssimple.Board (
   Board,
   Position,
@@ -12,12 +14,14 @@ import Chesssimple.Color
 
 import Data.Matrix
 import qualified Data.List as List(intersect)
+import Control.DeepSeq
+import GHC.Generics (Generic)
 
 type Board         = Matrix Square
 type Position      = (Int, Int)
-data Square        = BlankSquare | OccupiedSquare ColouredPiece deriving (Eq)
-data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq)
-data ColouredPiece = CP (Color, Piece) deriving (Eq)
+data Square        = BlankSquare | OccupiedSquare ColouredPiece deriving (Eq, Generic, NFData)
+data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq, Generic, NFData)
+data ColouredPiece = CP (Color, Piece) deriving (Eq, Generic, NFData)
 
 instance Show Square where
   show BlankSquare         = "_"

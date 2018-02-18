@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+
 module Chesssimple.Game (
   Game, new, isInitial, isCheck, isCheckMate, tryMovement, currentBoard,
   whoPlaysNow, update, turn, show, availableMovements, undo, player1, player2 ) where
@@ -10,12 +12,14 @@ import qualified Chesssimple.BoardAI as BoardAI
 
 import qualified Data.List as List
 import Data.Maybe (catMaybes)
+import Control.DeepSeq
+import GHC.Generics (Generic)
 
 data Game = Game { player1 :: Player.Player
                  , player2 :: Player.Player
                  , plays   :: [Board.Board]
                  , turn    :: Color.Color
-                 }
+                 } deriving (Generic, NFData)
 
 instance Show Game where
   show Game {player1=_, player2=_, plays=plays} = show $ head plays
