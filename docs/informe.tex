@@ -1,6 +1,7 @@
 \documentclass{llncs}
 %
 \usepackage{makeidx}
+\usepackage{hyperref}
 \usepackage{listings}
 \usepackage{scrextend}
 \addtokomafont{labelinglabel}{\sffamily}
@@ -559,7 +560,7 @@ instance GameAI.ZeroSumGame Game where
               allPossibilities
 \end{lstlisting}
 
-Como se puede ver, en el módulo \textit{BoardAI} se encuentra la función que realiza la evaluación del estado actual del juego, y del él, obtiene un puntaje. Los detalles internos de dicha función son propios del juego y se pueden estudiar y analizar en la bibliografía. \textit{nextGames} calcula todos los juegos inmediatos posibles que se pueden obtener a partir del juego actual. \textit{catMaybes} es necesaria para <<extraer>> o ignorar los valores contenidos en la mónada Maybe de la función \textit{tryMovement}.
+Como se puede ver, en el módulo \textit{BoardAI} se encuentra la función que realiza la evaluación del estado actual del juego, y del él, obtiene un puntaje. Los detalles internos de dicha función son propios del juego y se pueden estudiar, analizar y/o importar desde fuentes externas\footnote{Una de dichas fuentes, por ejemplo, es \url{https://chessprogramming.wikispaces.com/Simplified+evaluation+function}}. \textit{nextGames} calcula todos los juegos inmediatos posibles que se pueden obtener a partir del juego actual. \textit{catMaybes} es necesaria para <<extraer>> o ignorar los valores contenidos en la mónada Maybe de la función \textit{tryMovement}.
 
 Ahora sí, la definición de \textit{performMovement} es:
 
@@ -632,7 +633,7 @@ Sin más, esto es la IA del juego.
 
 \subsubsection{ Paralelización }
 
-Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha estudiado implementar una sencilla paralelización en el algoritmo. Se ha observado que la función \textit{performMovement} del código \ref{lst:perform_movement}, computa una lista con el valor negamax de cada jugada inmediata. Como dichos cálculos son independientes entre sí, se ha contemplado realizar esa computación en paralelo con el propósito de obtener un mejor \textit{speedup} usando varios hilos de ejecución.
+Como detalle adicional -para mejorar los tiempos de ejecución de la IA- se ha estudiado implementar una sencilla paralelización en el algoritmo. Se ha observado que la función \textit{performMovement} del código \ref{lst:perform_movement}, computa una lista con el valor negamax de cada jugada inmediata. Como dichos cálculos son independientes entre sí, se ha contemplado realizar esa computación en paralelo con el propósito de obtener un mejor \textit{speedup}\footnote{\textit{Speedup} se define como el cociente entre un tiempo de ejecución secuencial y un tiempo de ejecución paralelo. Con $n$ hilos de ejecución, el valor del \textit{speedup}, en condiciones ideales, sería $n$, demostrando que la variante paralela aprovecha eficientemente para el cálculo a todos los hilos de ejecución.} usando varios hilos de ejecución.
 
 La nueva versión de \textit{performMovement} se ve así:
 
@@ -650,7 +651,7 @@ performMovement game strength =
             aGame <- nextGames game]
 \end{lstlisting}
 
-En realidad, el único cambio significativo respecto a la vieja versión es el uso del paralelismo en la expresión \textit{(allPossibleGames `using` parList rdeepseq)}. Esta <<sintaxis>> proviene del paquete \textit{parallel} de Haskell y hace uso de estrategias de paralelización para separar la lógica real del programa del mecanismo o modelo de ejecución paralela.
+En realidad, el único cambio significativo respecto a la vieja versión es el uso del paralelismo en la expresión \textit{(allPossibleGames `using` parList rdeepseq)}. Esta <<sintaxis>> proviene del paquete \textit{parallel}\footnote{\url{https://hackage.haskell.org/package/parallel-3.2.1.1/docs/Control-Parallel-Strategies.html}} de Haskell y hace uso de estrategias de paralelización para separar la lógica real del programa del mecanismo o modelo de ejecución paralela.
 
 La paralelización en Haskell requiere entender algunos conceptos teóricos nuevos; no por el lenguaje en realidad, sino por la naturaleza de la evaluación \textit{lazy}. Básicamente, y sin entrar en grandes detalles, existen los conceptos de \textit{normal form} y de  \textit{weak head normal form}. El primero se aplica a aquellas expresiones que son completamente evaluadas o, dicho de otra manera, que son reducidas hasta la expresión más atómica posible. El segundo se aplica sobre expresiones en dónde únicamente se evalua hasta un <<paso>> o lo que dicte el contructor más externo. En general, Haskell funciona de esta última manera, lo cual es muy útil -prueba de esto es lo anteriormente visto de la función \textit{computeNegamax} en \ref{lst:compute_negamax}-. Pero hay casos como en la paralelización en donde, por ejemplo, los elementos de una lista, como en este caso, deben ser completamente evaluados si se desea obtener una mejora importante en los tiempos de ejecución; de los contrario, lo que se paraleliza es solamente el desarrollo del <<primer nivel>> de una expresión en \textit{weak head normal form}, y pierde todo el sentido la optimización.
 
@@ -668,6 +669,8 @@ Para concluir con este experimento, se dejará una pequeña métrica empírica. 
   N = 4 (solución paralela)   & 17s & 3
 \end{tabular}
 \newline
+
+
 
 Se puede notar que el speedup tiene un decaimiento logarítmico a medida que se incrementa el número de hilos, lo cual es consistente debido a los costos extras de mantener muchos de ellos en el sistema.
 
@@ -704,9 +707,11 @@ Actualmente hay implementadas cinco propiedades -todas <<válidas>>-, con lo que
 
 \section{Conclusiones}
 
-El desarrollo de este trabajo ha dejado un buen número de impresiones positivas y, algunas pocas, negativas. En principio, fue fructífero poder estudiar, analizar e implementar algunos de los conceptos de IA que son pilares en el desarrollo de un juego complejo como lo es el ajedrez. Muchos otros algoritmos y variantes quedaron fuera del estudio, pero podrían implementarse de forma independiente sin alterar ningún otro componente. En este sentido, la separación planteada entre la lógica propia del juego y el motor de IA a través del uso de clases de Haskell pareciera que dio buen resultado. Por otro lado, el estudio del lenguaje en sí y el desarrollo de esta aplicación fue un desafio interesante, y si bien hubo cuestiones que no quedaron bien resueltas, como por ejemplo, que algunas reglas no quedaron bien definidas por haber sido demasiado simplista en la definición de los tipos, aun así la experiencia resultó muy valiosa y seguramente servirá en un futuro desarrollo.
+El desarrollo de este trabajo ha dejado un buen número de impresiones positivas y, algunas pocas, negativas. En principio, fue fructífero poder estudiar, analizar e implementar algunos de los conceptos de IA que son pilares en el desarrollo de un juego complejo como lo es el ajedrez. Muchos otros algoritmos y variantes quedaron fuera del estudio, pero podrían implementarse de forma independiente sin alterar ningún otro componente. En este sentido, la separación planteada entre la lógica propia del juego y el motor de IA a través del uso de clases de Haskell pareciera que dio buen resultado. Por otro lado, el estudio del lenguaje en sí y el desarrollo de esta aplicación fue un desafio más que interesante.
 
 En cuanto a lo didáctico, el trabajo resultó en lineas generales placentero. En relación a esto, un problema que se ha notado es que en la bibliografia y en los textos en general dedicados a explicar y desarrollar las ideas de IA, lo hacen desde una perspectiva puramente operacional y resulta díficil entenderlo y <<traducirlo>> a un lenguaje más denotacional como el que sugiere Haskell. De hecho, una primera versión del motor de IA implementada para este trabajo se logró por medio de esta política y, posteriormente, en \cite{whyfunctional} y \cite{introfunctional} donde se muestran implementaciones de IA mucho más funcionales y elegantes, se decidió a última hora cambiar el diseño del motor hacia algo similar al estilo planteado en la bibliografía.
+
+Sobre lo negativo, se puede decir que algunas de las reglas no quedaron bien definidas por haber sido demasiado simplista en la definición de tipos. Se intentó sobre la mitad del desarrollo intentar mejorar el diseño pero dada la falta de experiencia propia en el desarrollo sobre el lenguaje y la rigurosidad que el mismo impone -en especial con los tipos para que todas las expresiones queden coherentes-, se relegó dicha tarea y se continuó con el resto de las funcionalidades. Aun así, la experiencia resultó muy valiosa y seguramente servirá en una futura aplicación.
 
 Como se ha mencionado en la introducción, la idea posterior es liberar el código fuente presente en este trabajo y, en lo posible, seguir desarrollandolo junto a la comunidad para seguir aprendiendo y aplicando conceptos sobre programación funcional.
 
@@ -715,21 +720,12 @@ Como se ha mencionado en la introducción, la idea posterior es liberar el códi
 %
 \begin{thebibliography}{}
   \bibitem[1]{whyfunctional}
-  John Hughes - Why functional programming matters
+    J. Hughes, Why functional programming matters, The Computer Journal, v.32 n.2, p.98-107, April 1989 \href{https://dx.doi.org/10.1093/comjnl/32.2.98}{[doi$>$10.1093/comjnl/32.2.98]}
   \bibitem[2]{introfunctional}
-  Richard Bird, Philip Wadler - Introduction to Functional Programming
-  \bibitem[3]{howtowritehaskellprogram}
-    How to write a Haskell program - \url{https://wiki.haskell.org/How\_to\_write\_a\_Haskell\_program}
-  \bibitem[4]{ioinside}
-    IO inside - \url{https://wiki.haskell.org/IO\_inside}
-  \bibitem[5]{ia_modernaproach}
-    Stuart Russell, Peter Norvig - Artificial Intelligence, A modern approach
-  \bibitem[6]{chess_programming}
-    Chess Programming Wiki - \url{https://chessprogramming.wikispaces.com/}
-  \bibitem[7]{parallel}
-    Parallel - \url{https://hackage.haskell.org/package/parallel-3.2.1.1/docs/Control-Parallel-Strategies.html}
-  \bibitem[8]{parallel_and_concurrent}
-    Simon Marlow - Parallel and Concurrent Programming in Haskell
+    Richard Bird, Philip Wadler, An introduction to functional programming, Prentice Hall International (UK) Ltd., Hertfordshire, UK, 1988
+  \bibitem[3]{ia_modernaproach}
+    S.J. Russell, P. Norvig, Artificial Intelligence: A Modern Approach, Prentice Hall, Englewood Cliffs, NJ, 1995,.
+  \bibitem[4]{parallel_and_concurrent}
+    Simon Marlow, Parallel and Concurrent Programming in Haskell, O'Reilly Media, Sebastopol, California, USA, 2013
 \end{thebibliography}
-
 \end{document}
