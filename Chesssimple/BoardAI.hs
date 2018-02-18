@@ -10,7 +10,7 @@ import Chesssimple.Color
 
 evaluateBoard :: Board -> Color -> Int
 evaluateBoard board color
-  | isCheckMate board color = -1000000000 -- NOTE: 'isCheckMate' currently determines if the player is losing by checkmate. Therefore, the board evaluation MUST tend to a infinite negative value, because it's the most unfavourable position for that team.
+  | isCheckMate board color = -1000000000 * who2Move -- NOTE: 'isCheckMate' currently determines if the player is losing by checkmate. Therefore, the board evaluation MUST tend to a infinite negative value, because it's the most unfavourable position for that team.
   | otherwise =
       let numberOf = \color piece -> length $ positionsOf board color piece
           materialScore   = (900 * (numberOf White Queen  - numberOf Black Queen) +
