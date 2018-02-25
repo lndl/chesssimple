@@ -551,16 +551,19 @@ instance GameAI.ZeroSumGame Game where
   evaluateGame game =
     BoardAI.evaluateBoard (currentBoard game) (turn game)
   nextGames game =
-    let allPossibilities =
-          Board.possibleMovementsForeachTeamPosition
-            (currentBoard game) (turn game)
-     in catMaybes $
-          concatMap (\(src, dsts) ->
-            map (\dst -> tryMovement game src dst) dsts)
-              allPossibilities
+    if isCheckMate game
+    then []
+    else
+      let allPossibilities =
+        Board.possibleMovementsForeachTeamPosition
+          (currentBoard game) (turn game)
+       in catMaybes $
+            concatMap (\(src, dsts) ->
+              map (\dst -> tryMovement game src dst) dsts)
+                allPossibilities
 \end{lstlisting}
 
-Como se puede ver, en el módulo \textit{BoardAI} se encuentra la función que realiza la evaluación del estado actual del juego, y del él, obtiene un puntaje. Los detalles internos de dicha función son propios del juego y se pueden estudiar, analizar y/o importar desde fuentes externas\footnote{Una de dichas fuentes, por ejemplo, es \url{https://chessprogramming.wikispaces.com/Simplified+evaluation+function}}. \textit{nextGames} calcula todos los juegos inmediatos posibles que se pueden obtener a partir del juego actual. \textit{catMaybes} es necesaria para <<extraer>> o ignorar los valores contenidos en la mónada Maybe de la función \textit{tryMovement}.
+Como se puede ver, en el módulo \textit{BoardAI} se encuentra la función que realiza la evaluación del estado actual del juego, y del él, obtiene un puntaje. Los detalles internos de dicha función son propios del juego y se pueden estudiar, analizar y/o importar desde fuentes externas\footnote{Una de dichas fuentes, por ejemplo, es \url{https://chessprogramming.wikispaces.com/Simplified+evaluation+function}}. \textit{nextGames} calcula todos los juegos inmediatos posibles que se pueden obtener a partir del juego actual, salvo que el juego esté terminado, en cuyo caso, no genera juegos siguientes. \textit{catMaybes} es necesaria para <<extraer>> o ignorar los valores contenidos en la mónada Maybe de la función \textit{tryMovement}.
 
 Ahora sí, la definición de \textit{performMovement} es:
 
