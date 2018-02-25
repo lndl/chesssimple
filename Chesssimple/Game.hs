@@ -27,8 +27,10 @@ instance Show Game where
 instance GameAI.ZeroSumGame Game where
   evaluateGame game = BoardAI.evaluateBoard (currentBoard game) (turn game)
   nextGames game =
-    let allPossibilities = Board.possibleMovementsForeachTeamPosition (currentBoard game) (turn game)
-     in catMaybes $ concatMap (\(src, possibleDsts) -> map (\dst -> tryMovement game src dst) possibleDsts) allPossibilities
+    if isCheckMate game
+    then []
+    else let allPossibilities = Board.possibleMovementsForeachTeamPosition (currentBoard game) (turn game)
+          in catMaybes $ concatMap (\(src, possibleDsts) -> map (\dst -> tryMovement game src dst) possibleDsts) allPossibilities
 
 new :: Player.Player -> Player.Player -> Game
 new p1 p2 = new' p1 p2 [Board.classicBoard] Color.White
