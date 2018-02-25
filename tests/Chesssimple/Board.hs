@@ -19,7 +19,7 @@ instance Arbitrary Color where
   arbitrary = colors
 
 instance Arbitrary Piece where
-  arbitrary = elements [Pawn, Tower, Knight, Bishop, Queen, King]
+  arbitrary = elements [Pawn, Rook, Knight, Bishop, Queen, King]
 
 instance Arbitrary ColouredPiece where
   arbitrary = do
@@ -52,8 +52,8 @@ validBoard = suchThat randomBoard isValid
 
 prop_queen_movs :: Position -> Bool
 prop_queen_movs xy =
-  (Set.fromList (allMovements (CP (White, Queen)) xy) == Set.fromList (allMovements (CP (White, Bishop)) xy ++ allMovements (CP (White, Tower)) xy)) &&
-    (Set.fromList (allMovements (CP (Black, Queen)) xy) == Set.fromList (allMovements (CP (Black, Bishop)) xy ++ allMovements (CP (Black, Tower)) xy))
+  (Set.fromList (allMovements (CP (White, Queen)) xy) == Set.fromList (allMovements (CP (White, Bishop)) xy ++ allMovements (CP (White, Rook)) xy)) &&
+    (Set.fromList (allMovements (CP (Black, Queen)) xy) == Set.fromList (allMovements (CP (Black, Bishop)) xy ++ allMovements (CP (Black, Rook)) xy))
 
 
 

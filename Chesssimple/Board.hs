@@ -4,7 +4,7 @@ module Chesssimple.Board (
   Board,
   Position,
   Square(BlankSquare,OccupiedSquare),
-  Piece(Pawn, Tower, Knight, Bishop, Queen, King),
+  Piece(Pawn, Rook, Knight, Bishop, Queen, King),
   ColouredPiece(CP),
   newBoard, newBoardFromList, classicBoard, legalGrab, freeMovements, possibleMovementsForeachTeamPosition, teamMovements,
   enemyMovements, allMovements, movePiece, isCheck, isCheckMate, placePiece,
@@ -20,7 +20,7 @@ import GHC.Generics (Generic)
 type Board         = Matrix Square
 type Position      = (Int, Int)
 data Square        = BlankSquare | OccupiedSquare ColouredPiece deriving (Eq, Generic, NFData)
-data Piece         = Pawn | Knight | Bishop | Tower | Queen | King deriving (Eq, Generic, NFData)
+data Piece         = Pawn | Knight | Bishop | Rook | Queen | King deriving (Eq, Generic, NFData)
 data ColouredPiece = CP (Color, Piece) deriving (Eq, Generic, NFData)
 
 instance Show Square where
@@ -34,7 +34,7 @@ instance Show Piece where
   show Pawn   = "p"
   show Knight = "N"
   show Bishop = "B"
-  show Tower  = "T"
+  show Rook   = "R"
   show Queen  = "Q"
   show King   = "K"
 
@@ -52,13 +52,13 @@ classicBoard = newBoard classicLayout
 
 classicLayout :: Position -> Square
 classicLayout (i, j)
-  | (i == 1) && (j == 1 || j == 8) = OccupiedSquare $ CP (Black, Tower)
+  | (i == 1) && (j == 1 || j == 8) = OccupiedSquare $ CP (Black, Rook)
   | (i == 1) && (j == 2 || j == 7) = OccupiedSquare $ CP (Black, Knight)
   | (i == 1) && (j == 3 || j == 6) = OccupiedSquare $ CP (Black, Bishop)
   | (i == 1) && (j == 4)           = OccupiedSquare $ CP (Black, Queen)
   | (i == 1) && (j == 5)           = OccupiedSquare $ CP (Black, King)
   | (i == 2)                       = OccupiedSquare $ CP (Black, Pawn)
-  | (i == 8) && (j == 1 || j == 8) = OccupiedSquare $ CP (White, Tower)
+  | (i == 8) && (j == 1 || j == 8) = OccupiedSquare $ CP (White, Rook)
   | (i == 8) && (j == 2 || j == 7) = OccupiedSquare $ CP (White, Knight)
   | (i == 8) && (j == 3 || j == 6) = OccupiedSquare $ CP (White, Bishop)
   | (i == 8) && (j == 4)           = OccupiedSquare $ CP (White, Queen)
@@ -229,7 +229,7 @@ _generalFreeMovements board turn position = concatMap (availabilityPositionFilte
 pieceUnboundedMovements :: ColouredPiece -> Position -> [[Position]]
 pieceUnboundedMovements (CP (Black, Pawn)) = blackPawnMovements
 pieceUnboundedMovements (CP (White, Pawn)) = whitePawnMovements
-pieceUnboundedMovements (CP (_, Tower))    = towerMovements
+pieceUnboundedMovements (CP (_, Rook))     = rookMovements
 pieceUnboundedMovements (CP (_, Knight))   = knightMovements
 pieceUnboundedMovements (CP (_, Bishop))   = bishopMovements
 pieceUnboundedMovements (CP (_, Queen))    = queenMovements
@@ -245,12 +245,12 @@ whitePawnMovements :: Position -> [[Position]]
 whitePawnMovements (i,j) = if i == 7 then [[(i-1, j), (i-2, j)]]
                                      else [[(i-1, j)]]
 
-towerMovements :: Position -> [[Position]]
-towerMovements (i,j) = let up    = [ (x, y) | x <- reverse [1..i-1], y <- [j] ]
-                           down  = [ (x, y) | x <- [i+1..8], y <- [j] ]
-                           left  = [ (x, y) | x <- [i], y <- reverse [1..j-1] ]
-                           right = [ (x, y) | x <- [i], y <- [j+1..8] ]
-                        in [ up, down, left, right ]
+rookMovements :: Position -> [[Position]]
+rookMovements (i,j) = let up    = [ (x, y) | x <- reverse [1..i-1], y <- [j] ]
+                          down  = [ (x, y) | x <- [i+1..8], y <- [j] ]
+                          left  = [ (x, y) | x <- [i], y <- reverse [1..j-1] ]
+                          right = [ (x, y) | x <- [i], y <- [j+1..8] ]
+                       in [ up, down, left, right ]
 
 bishopMovements :: Position -> [[Position]]
 bishopMovements (i,j) = let upperLeft  = zip (reverse [1..i-1]) (reverse [1..j-1])
@@ -260,7 +260,7 @@ bishopMovements (i,j) = let upperLeft  = zip (reverse [1..i-1]) (reverse [1..j-1
                          in [ upperLeft, upperRight, lowerLeft, lowerRight]
 
 queenMovements :: Position -> [[Position]]
-queenMovements (i,j) = bishopMovements (i,j) ++ towerMovements (i,j)
+queenMovements (i,j) = bishopMovements (i,j) ++ rookMovements (i,j)
 
 kingMovements :: Position -> [[Position]]
 kingMovements (i,j) = let firstSteps = \positions -> if null positions then [] else [head positions]

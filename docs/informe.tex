@@ -224,7 +224,7 @@ data Square        = BlankSquare |
                        OccupiedSquare ColouredPiece
                          deriving (Eq)
 data ColouredPiece = CP (Color, Piece) deriving (Eq)
-data Piece         = Pawn  | Knight | Bishop | Tower |
+data Piece         = Pawn  | Knight | Bishop | Rook |
                      Queen | King deriving (Eq)
 type Position      = (Int, Int)
 \end{lstlisting}
@@ -420,7 +420,7 @@ allMovements colouredPiece position =
 
 Lo que simplemente hace es recortar el movimiento de las piezas según los límites del tablero. En un primer momento se pensó en hacer que \textit{pieceUnboundedMovements} fuera una función infinita de manera tal que la dimensión del tablero no dependiera del movimiento de las piezas, pero dicho objetivo se abandonó rápidamente en favor de cumplir con el alcance del trabajo. De cualquier manera la implementación está abierta a realizar dicho cambio o mejora, y ninguna otra parte del código debería verse afectada, excepto por \textit{isInsideBoard}.
 
-Antes de volver con el desarrollo de \textit{generalFreeMovements}, se mostrarán las funciones \textit{pieceUnboundedMovements} y \textit{towerMovements} con el propósito de ir cerrando la exploración del módulo:
+Antes de volver con el desarrollo de \textit{generalFreeMovements}, se mostrarán las funciones \textit{pieceUnboundedMovements} y \textit{rookMovements} con el propósito de ir cerrando la exploración del módulo:
 
 \begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función pieceUnboundedMovements, label={lst:piece_unbounded_movements}]
 pieceUnboundedMovements :: ColouredPiece -> Position ->
@@ -429,8 +429,8 @@ pieceUnboundedMovements (CP (Black, Pawn)) =
   blackPawnMovements
 pieceUnboundedMovements (CP (White, Pawn)) =
   whitePawnMovements
-pieceUnboundedMovements (CP (_, Tower))    =
-  towerMovements
+pieceUnboundedMovements (CP (_, Rook))     =
+  rookMovements
 pieceUnboundedMovements (CP (_, Knight))   =
   knightMovements
 pieceUnboundedMovements (CP (_, Bishop))   =
@@ -441,9 +441,9 @@ pieceUnboundedMovements (CP (_, King))     =
   kingMovements
 \end{lstlisting}
 
-\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función towerMovements, label={lst:tower_movements}]
-towerMovements :: Position -> [[Position]]
-towerMovements (i,j) =
+\begin{lstlisting}[frame=single, language=haskell, captionpos=b, caption=Función rookMovements, label={lst:rook_movements}]
+rookMovements :: Position -> [[Position]]
+rookMovements (i,j) =
   let up    = [ (x, y) | x <- reverse [1..i-1], y <- [j] ]
       down  = [ (x, y) | x <- [i+1..8], y <- [j] ]
       left  = [ (x, y) | x <- [i], y <- reverse [1..j-1] ]

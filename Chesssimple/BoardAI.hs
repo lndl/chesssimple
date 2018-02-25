@@ -16,7 +16,7 @@ evaluateBoard board color
   | otherwise =
       let numberOf = \color piece -> length $ positionsOf board color piece
           materialScore   = (900 * (numberOf White Queen  - numberOf Black Queen) +
-                            500 * (numberOf White Tower  - numberOf Black Tower) +
+                            500 * (numberOf White Rook  - numberOf Black Rook) +
                             360 * (numberOf White Bishop - numberOf Black Bishop) +
                             320 * (numberOf White Knight - numberOf Black Knight) +
                             100 * (numberOf White Pawn - numberOf Black Pawn))
@@ -25,7 +25,7 @@ evaluateBoard board color
  where who2Move = if color == White then 1 else -1
 
 positionsScore :: Board -> Color -> Int
-positionsScore board color = pawnsPositionBonus board color + knightPositionBonus board color + bishopPositionBonus board color + towerPositionBonus board color + queenPositionBonus board color + kingPositionBonus board color
+positionsScore board color = pawnsPositionBonus board color + knightPositionBonus board color + bishopPositionBonus board color + rookPositionBonus board color + queenPositionBonus board color + kingPositionBonus board color
 
 positionsScoreFor :: Board -> Color -> Piece -> [Int] -> Int
 positionsScoreFor board color piece scores =
@@ -69,9 +69,9 @@ bishopPositionBonus board color =
    -10,  5,  0,  0,  0,  0,  5,-10,
    -20,-10,-10,-10,-10,-10,-10,-20]
 
-towerPositionBonus :: Board -> Color -> Int
-towerPositionBonus board color =
-  positionsScoreFor board color Tower
+rookPositionBonus :: Board -> Color -> Int
+rookPositionBonus board color =
+  positionsScoreFor board color Rook
   [0,  0,  0,  0,  0,  0,  0,  0,
    5, 10, 10, 10, 10, 10, 10,  5,
   -5,  0,  0,  0,  0,  0,  0, -5,
